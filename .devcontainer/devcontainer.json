@@ -10,7 +10,32 @@
 		"ghcr.io/itsmechlark/features/postgresql:1": {}
 	},
 
-  "postCreateCommand": "bash mix archive.install --force hex phx_new"
+  "postCreateCommand": "bash mix archive.install --force hex phx_new",
+
+  // Configure tool-specific properties.
+  "customizations": {
+    // Configure properties specific to VS Code.
+    "vscode": {
+      // Add the IDs of extensions you want installed when the container is created.
+      "extensions": [
+        "jakebecker.elixir-ls",
+        "esbenp.prettier-vscode",
+        "rubbersheep.gi",
+        "mhutchie.git-graph",
+        "eamodio.gitlens",
+        "Orta.vscode-jest",
+        "yzhang.markdown-all-in-one",
+        "bierner.markdown-mermaid",
+        "bpruitt-goddard.mermaid-markdown-syntax-highlighting",
+        "wayou.vscode-todo-highlight",
+        "shardulm94.trailing-spaces",
+        "streetsidesoftware.code-spell-checker",
+        "rust-lang.rust-analyzer",
+        "GitHub.copilot",
+        "GitHub.copilot-chat"
+      ]
+    }
+  }
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
