@@ -1,7 +1,7 @@
 defmodule Rephex.State do
   @type t :: %__MODULE__{
           root?: boolean(),
-          slices: %{atom() => struct()}
+          slices: %{atom() => map()}
         }
 
   defstruct root?: true, slices: %{}
@@ -34,22 +34,29 @@ defmodule Rephex.State.Support do
 
   @root Rephex.root()
 
-  @empty_root %Rephex.State{}
+  @type slice_state :: map()
 
   @spec init_state(Socket.t(), [module()]) :: Socket.t()
   def init_state(%Socket{} = socket, slice_modules) do
-    socket =
-      socket
-      |> Phoenix.Component.assign_new(@root, fn -> @empty_root end)
+    slices =
+      slice_modules
+      |> Enum.map(fn module ->
+        %{name: name, initial_state: initial_state} = module.slice_info()
+        {name, initial_state}
+      end)
+      |> Map.new()
 
-    slice_modules
-    |> Enum.reduce(socket, fn module, socket -> module.init(socket) end)
+    socket
+    |> Phoenix.Component.assign(@root, %Rephex.State{root?: true, slices: slices})
   end
 
   @spec collect_async_modules([module()]) :: MapSet.t()
   def collect_async_modules(slice_modules) do
     slice_modules
-    |> Enum.flat_map(& &1.async_modules())
+    |> Enum.flat_map(fn module ->
+      %{async_modules: async_modules} = module.slice_info()
+      async_modules
+    end)
     |> MapSet.new()
   end
 
@@ -64,6 +71,24 @@ defmodule Rephex.State.Support do
 
   @spec get_slice(Socket.t(), atom()) :: map()
   def get_slice(%Socket{} = socket, slice_name) when is_atom(slice_name) do
-    socket.assigns[@root][slice_name]
+    %Rephex.State{slices: slices} = socket.assigns[@root]
+    Map.fetch!(slices, slice_name)
+  end
+
+  @spec put_slice(Socket.t(), atom(), slice_state()) :: Socket.t()
+  def put_slice(%Socket{} = socket, slice_name, %{} = state) when is_atom(slice_name) do
+    Phoenix.Component.update(socket, @root, fn %Rephex.State{slices: slices} = root ->
+      slices = Map.put(slices, slice_name, state)
+      %Rephex.State{root | slices: slices}
+    end)
+  end
+
+  @spec update_slice(Socket.t(), atom(), (slice_state() -> slice_state())) :: map()
+  def update_slice(%Socket{} = socket, slice_name, fun)
+      when is_atom(slice_name) and is_function(fun, 1) do
+    Phoenix.Component.update(socket, @root, fn %Rephex.State{slices: slices} = root ->
+      slices = Map.update!(slices, slice_name, fun)
+      %Rephex.State{root | slices: slices}
+    end)
   end
 end
