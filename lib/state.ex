@@ -1,4 +1,11 @@
 defmodule Rephex.State do
+  @type t :: %__MODULE__{
+          root?: boolean(),
+          slices: %{atom() => struct()}
+        }
+
+  defstruct root?: true, slices: %{}
+
   defmacro __using__([slices: slices] = _opt) when is_list(slices) do
     quote do
       alias Rephex.State.Support
@@ -9,7 +16,7 @@ defmodule Rephex.State do
 
       @spec init(Socket.t()) :: Socket.t()
       def init(%Socket{} = socket) do
-        Support.init_slices(socket, @__slices)
+        Support.init_state(socket, @__slices)
       end
 
       def resolve_async(%Socket{} = socket, name, result) do
@@ -17,6 +24,9 @@ defmodule Rephex.State do
       end
     end
   end
+
+  @spec propagate(t()) :: t()
+  def propagate(%__MODULE__{} = rephex_state), do: %{rephex_state | root?: false}
 end
 
 defmodule Rephex.State.Support do
@@ -24,9 +34,13 @@ defmodule Rephex.State.Support do
 
   @root Rephex.root()
 
-  @spec init_slices(Socket.t(), [module()]) :: Socket.t()
-  def init_slices(%Socket{} = socket, slice_modules) do
-    socket = socket |> Phoenix.Component.assign_new(@root, fn -> %{} end)
+  @empty_root %Rephex.State{}
+
+  @spec init_state(Socket.t(), [module()]) :: Socket.t()
+  def init_state(%Socket{} = socket, slice_modules) do
+    socket =
+      socket
+      |> Phoenix.Component.assign_new(@root, fn -> @empty_root end)
 
     slice_modules
     |> Enum.reduce(socket, fn module, socket -> module.init(socket) end)
@@ -46,5 +60,10 @@ defmodule Rephex.State.Support do
     else
       raise {:not_async_module, name}
     end
+  end
+
+  @spec get_slice(Socket.t(), atom()) :: map()
+  def get_slice(%Socket{} = socket, slice_name) when is_atom(slice_name) do
+    socket.assigns[@root][slice_name]
   end
 end

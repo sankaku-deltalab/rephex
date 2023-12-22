@@ -29,9 +29,9 @@ defmodule Rephex.Slice.Support do
       ```
       """
       @spec init_slice(Socket.t(), state()) :: Socket.t()
-      def init_slice(%Socket{} = socket, %slice_struct{} = state) do
+      def init_slice(%Socket{} = socket, %slice_struct{} = initial_state) do
         socket
-        |> update(@root, fn root -> Map.put(root, @slice_name, state) end)
+        |> update(@root, fn root -> Map.put(root, @slice_name, initial_state) end)
       end
 
       @doc """
@@ -60,7 +60,7 @@ defmodule Rephex.Slice.Support do
       """
       @spec get_slice(Socket.t()) :: state()
       def get_slice(%Socket{} = socket) do
-        socket.assigns[@root][@slice_name]
+        Rephex.State.Support.get_slice(socket, @slice_name)
       end
 
       @doc """

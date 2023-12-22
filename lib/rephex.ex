@@ -134,6 +134,7 @@ defmodule Rephex do
     <p>Count: <%= RephexUser.Slice.CounterSlice.count(@__rephex__) %></p>
     <button phx-click="add_count" phx-value-amount="10">[Add 10]</button>
     <button phx-click="add_2_async">[Add 2 async]</button>
+    <.live_component id="child_1" module={ChildComponent} __rephex__={Rephex.State.propagate(@__rephex__)}/>
   </div>
   ```
 
