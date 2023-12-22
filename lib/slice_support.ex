@@ -71,9 +71,9 @@ defmodule Rephex.Slice.Support do
       end
       ```
       """
-      @spec slice_in_root(%{slice_name() => state}) :: state()
-      def slice_in_root(%{@slice_name => state}) do
-        state
+      @spec slice_in_root(%Rephex.State{}) :: state()
+      def slice_in_root(%Rephex.State{} = root_state) do
+        Rephex.State.Support.get_slice_from_root(root_state, @slice_name)
       end
 
       @doc """

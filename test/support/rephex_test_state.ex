@@ -21,12 +21,16 @@ defmodule RephexTest.Fixture.State.CounterSlice do
     %{name: :counter, initial_state: @initial_state, async_modules: [AddCountAsync]}
   end
 
+  # Action
+
   @spec add_count(Socket.t(), %{amount: integer()}) :: Socket.t()
   def add_count(%Socket{} = socket, %{amount: amount} = _payload) when is_integer(amount) do
     Support.update_slice(socket, fn state ->
       %{state | count: state.count + amount}
     end)
   end
+
+  # Async action
 
   @spec add_count_delayed(
           socket :: Socket.t(),
@@ -38,6 +42,26 @@ defmodule RephexTest.Fixture.State.CounterSlice do
     socket
     |> Support.start_async(AddCountAsync, payload)
     |> Support.set_async_as_loading!(:loading_async)
+  end
+
+  # Selector
+
+  def count(%Rephex.State{} = root) do
+    root
+    |> Support.slice_in_root()
+    |> then(fn %{count: c} -> c end)
+  end
+
+  def loading_status(%Rephex.State{} = root) do
+    root
+    |> Support.slice_in_root()
+    |> then(fn %{loading_async: async} -> async end)
+    |> case do
+      %AsyncResult{loading: true} -> :loading
+      %AsyncResult{failed: f} when f != nil -> :failed
+      %AsyncResult{ok?: true} -> :ok
+      true -> :not_loaded
+    end
   end
 end
 

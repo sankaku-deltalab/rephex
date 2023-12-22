@@ -98,5 +98,12 @@ defmodule Rephex.State.Support do
     end)
   end
 
-  defp propagated?(%Socket{} = socket), do: socket.assigns[@root].root?
+  @spec get_slice_from_root(Rephex.State.t(), atom()) :: map()
+  def get_slice_from_root(%Rephex.State{} = root_state, slice_name) when is_atom(slice_name) do
+    %Rephex.State{slices: slices} = root_state
+    Map.fetch!(slices, slice_name)
+  end
+
+  @spec propagated?(Socket.t()) :: boolean()
+  def propagated?(%Socket{} = socket), do: not socket.assigns[@root].root?
 end
