@@ -95,6 +95,9 @@ defmodule Rephex.Slice.Support do
       """
       @spec start_async(Socket.t(), module(), map()) :: Socket.t()
       def start_async(%Socket{} = socket, module, payload) when is_atom(module) do
+        if Rephex.State.Support.propagated?(socket),
+          do: raise("Must start async on propagated state.")
+
         fun_raw = &module.start_async/2
         fun_for_async = fn -> fun_raw.(get_slice(socket), payload) end
 

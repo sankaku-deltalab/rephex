@@ -62,6 +62,8 @@ defmodule Rephex.State.Support do
 
   @spec resolve_async(Socket.t(), MapSet.t(), atom(), any()) :: any()
   def resolve_async(%Socket{} = socket, %MapSet{} = async_modules, name, result) do
+    if propagated?(socket), do: raise("Must not resolve async on propagated state.")
+
     if name in async_modules do
       name.resolve(socket, result)
     else
@@ -77,6 +79,8 @@ defmodule Rephex.State.Support do
 
   @spec put_slice(Socket.t(), atom(), slice_state()) :: Socket.t()
   def put_slice(%Socket{} = socket, slice_name, %{} = state) when is_atom(slice_name) do
+    if propagated?(socket), do: raise("Must not mutate propagated state.")
+
     Phoenix.Component.update(socket, @root, fn %Rephex.State{slices: slices} = root ->
       slices = Map.put(slices, slice_name, state)
       %Rephex.State{root | slices: slices}
@@ -86,9 +90,13 @@ defmodule Rephex.State.Support do
   @spec update_slice(Socket.t(), atom(), (slice_state() -> slice_state())) :: map()
   def update_slice(%Socket{} = socket, slice_name, fun)
       when is_atom(slice_name) and is_function(fun, 1) do
+    if propagated?(socket), do: raise("Must not mutate propagated state.")
+
     Phoenix.Component.update(socket, @root, fn %Rephex.State{slices: slices} = root ->
       slices = Map.update!(slices, slice_name, fun)
       %Rephex.State{root | slices: slices}
     end)
   end
+
+  defp propagated?(%Socket{} = socket), do: socket.assigns[@root].root?
 end
