@@ -59,6 +59,14 @@ defmodule Rephex.Slice.Support do
       end
 
       @doc """
+      Get Rephex root state from socket.
+      """
+      @spec get_root(Socket.t()) :: Rephex.State.t()
+      def get_root(%Socket{} = socket) do
+        socket.assigns[@root]
+      end
+
+      @doc """
       Get Rephex slice from root state.
 
       ## Example
@@ -89,7 +97,6 @@ defmodule Rephex.Slice.Support do
       def add_count_async(%Socket{} = socket, %{amount: _} = payload) do
         socket
         |> Support.start_async(AddCountAsync, payload)
-        |> LiveView.put_flash(:info, "Start async action")
       end
       ```
       """
@@ -101,9 +108,13 @@ defmodule Rephex.Slice.Support do
         fun_raw = &module.start_async/2
         fun_for_async = fn -> fun_raw.(get_slice(socket), payload) end
 
-        socket
-        |> module.before_async(payload)
-        |> Phoenix.LiveView.start_async(module, fun_for_async)
+        case module.before_async(socket, payload) do
+          {:continue, %Socket{} = socket} ->
+            Phoenix.LiveView.start_async(socket, module, fun_for_async)
+
+          {:abort, %Socket{} = socket} ->
+            socket
+        end
       end
 
       @doc """

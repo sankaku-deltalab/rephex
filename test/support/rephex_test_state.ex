@@ -4,10 +4,11 @@ defmodule RephexTest.Fixture.State.CounterSlice do
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.Socket
 
-  @type t :: %{count: integer(), loading_async: %AsyncResult{}}
+  @type t :: %{count: integer(), loading_async: %AsyncResult{}, add_async_failed: boolean()}
   @initial_state %{
     count: 0,
-    loading_async: %AsyncResult{}
+    loading_async: %AsyncResult{},
+    add_async_failed: false
   }
 
   defmodule Support do
@@ -56,7 +57,7 @@ defmodule RephexTest.Fixture.State.CounterSlice do
       %AsyncResult{loading: true} -> :loading
       %AsyncResult{failed: f} when f != nil -> :failed
       %AsyncResult{ok?: true} -> :ok
-      true -> :not_loaded
+      _ -> :not_loaded
     end
   end
 end
@@ -70,9 +71,30 @@ defmodule RephexTest.Fixture.State.CounterSlice.AddCountAsync do
   alias RephexTest.Fixture.State.CounterSlice.Support
 
   @impl true
+  @spec before_async(socket :: Socket.t(), payload :: map()) ::
+          {:continue, Socket.t()} | {:abort, Socket.t()}
   def before_async(%Socket{} = socket, _payload) do
-    socket
-    |> Support.set_async_as_loading!(:loading_async)
+    loading_status =
+      socket
+      |> Support.get_root()
+      |> CounterSlice.loading_status()
+
+    case loading_status do
+      :loading ->
+        socket =
+          Support.update_slice(socket, fn state ->
+            %{state | add_async_failed: true}
+          end)
+
+        {:abort, socket}
+
+      _ ->
+        {
+          :continue,
+          socket
+          |> Support.set_async_as_loading!(:loading_async)
+        }
+    end
   end
 
   @impl true
