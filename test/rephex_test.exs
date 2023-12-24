@@ -18,8 +18,6 @@ defmodule RephexTest do
     socket =
       Fixture.new_socket_with_slices() |> CounterSlice.add_count_delayed(%{amount: 2, delay: 100})
 
-    slice_state = CounterSlice.Support.get_slice(socket)
-
     root = socket.assigns.__rephex__
     assert CounterSlice.count(root) == 0
     assert CounterSlice.loading_status(root) == :loading

@@ -101,7 +101,9 @@ defmodule Rephex.Slice.Support do
         fun_raw = &module.start_async/2
         fun_for_async = fn -> fun_raw.(get_slice(socket), payload) end
 
-        Phoenix.LiveView.start_async(socket, module, fun_for_async)
+        socket
+        |> module.before_async(payload)
+        |> Phoenix.LiveView.start_async(module, fun_for_async)
       end
 
       @doc """

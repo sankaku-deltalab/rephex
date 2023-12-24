@@ -37,12 +37,8 @@ defmodule RephexTest.Fixture.State.CounterSlice do
           payload :: %{amount: integer(), delay: non_neg_integer()}
         ) ::
           Socket.t()
-  def add_count_delayed(%Socket{} = socket, %{amount: amount, delay: delay} = payload)
-      when is_integer(amount) and is_integer(delay) do
-    socket
-    |> Support.start_async(AddCountAsync, payload)
-    |> Support.set_async_as_loading!(:loading_async)
-  end
+  def add_count_delayed(%Socket{} = socket, payload),
+    do: Support.start_async(socket, AddCountAsync, payload)
 
   # Selector
 
@@ -72,6 +68,12 @@ defmodule RephexTest.Fixture.State.CounterSlice.AddCountAsync do
 
   alias RephexTest.Fixture.State.CounterSlice
   alias RephexTest.Fixture.State.CounterSlice.Support
+
+  @impl true
+  def before_async(%Socket{} = socket, _payload) do
+    socket
+    |> Support.set_async_as_loading!(:loading_async)
+  end
 
   @impl true
   def start_async(_state, %{amount: amount, delay: delay} = _payload)
