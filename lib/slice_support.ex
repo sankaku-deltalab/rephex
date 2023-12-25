@@ -124,7 +124,7 @@ defmodule Rephex.Slice.Support do
       @spec cancel_async(Socket.t(), async_module()) :: Socket.t()
       def cancel_async(%Socket{} = socket, module) when is_atom(module) do
         if Rephex.State.Support.propagated?(socket),
-          do: raise("Must start async on propagated state.")
+          do: raise("Must cancel async on propagated state.")
 
         Phoenix.LiveView.cancel_async(socket, module)
       end
