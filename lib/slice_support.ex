@@ -9,6 +9,7 @@ defmodule Rephex.Slice.Support do
 
       @type slice_name :: unquote(slice_name)
       @type state :: map()
+      @type async_module :: module()
 
       @doc """
       Initialize Rephex slice.
@@ -100,7 +101,7 @@ defmodule Rephex.Slice.Support do
       end
       ```
       """
-      @spec start_async(Socket.t(), module(), map()) :: Socket.t()
+      @spec start_async(Socket.t(), async_module(), map()) :: Socket.t()
       def start_async(%Socket{} = socket, module, payload) when is_atom(module) do
         if Rephex.State.Support.propagated?(socket),
           do: raise("Must start async on propagated state.")
@@ -120,7 +121,7 @@ defmodule Rephex.Slice.Support do
       @doc """
       Cancel async action.
       """
-      @spec cancel_async(Socket.t(), module()) :: Socket.t()
+      @spec cancel_async(Socket.t(), async_module()) :: Socket.t()
       def cancel_async(%Socket{} = socket, module) when is_atom(module) do
         if Rephex.State.Support.propagated?(socket),
           do: raise("Must start async on propagated state.")
