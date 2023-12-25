@@ -71,8 +71,7 @@ defmodule RephexTest.Fixture.State.CounterSlice.AddCountAsync do
   alias RephexTest.Fixture.State.CounterSlice.Support
 
   @impl true
-  @spec before_async(socket :: Socket.t(), payload :: map()) ::
-          {:continue, Socket.t()} | {:abort, Socket.t()}
+  @spec before_async(Socket.t(), map()) :: {:continue, Socket.t()} | {:abort, Socket.t()}
   def before_async(%Socket{} = socket, _payload) do
     loading_status =
       socket
@@ -98,7 +97,7 @@ defmodule RephexTest.Fixture.State.CounterSlice.AddCountAsync do
   end
 
   @impl true
-  def start_async(_state, %{amount: amount, delay: delay} = _payload)
+  def start_async(_state, %{amount: amount, delay: delay} = _payload, _send_msg)
       when is_integer(amount) and is_integer(delay) do
     :timer.sleep(delay)
     amount
@@ -115,6 +114,11 @@ defmodule RephexTest.Fixture.State.CounterSlice.AddCountAsync do
       {:exit, _} ->
         socket
     end
+  end
+
+  @impl true
+  def receive_message(%Socket{} = socket, _content) do
+    socket
   end
 end
 

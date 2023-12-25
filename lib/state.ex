@@ -35,6 +35,7 @@ defmodule Rephex.State.Support do
   @root Rephex.root()
 
   @type slice_state :: map()
+  @type async_module :: module()
 
   @spec init_state(Socket.t(), [module()]) :: Socket.t()
   def init_state(%Socket{} = socket, slice_modules) do
@@ -60,7 +61,7 @@ defmodule Rephex.State.Support do
     |> MapSet.new()
   end
 
-  @spec resolve_async(Socket.t(), MapSet.t(), atom(), any()) :: any()
+  @spec resolve_async(Socket.t(), MapSet.t(async_module()), atom(), any()) :: any()
   def resolve_async(%Socket{} = socket, %MapSet{} = async_modules, name, result) do
     if propagated?(socket), do: raise("Must not resolve async on propagated state.")
 
@@ -68,6 +69,25 @@ defmodule Rephex.State.Support do
       name.resolve(socket, result)
     else
       raise {:not_async_module, name}
+    end
+  end
+
+  @spec receive_message_from_async(
+          Socket.t(),
+          MapSet.t(async_module()),
+          {Rephex.AsyncAction, async_module(), any()}
+        ) :: Socket.t()
+  def receive_message_from_async(
+        %Socket{} = socket,
+        %MapSet{} = async_modules,
+        {Rephex.AsyncAction, module, content} = _message
+      ) do
+    if propagated?(socket), do: raise("Must not receive message in async on propagated state.")
+
+    if module in async_modules do
+      module.receive_message(socket, content)
+    else
+      raise {:not_async_module, module}
     end
   end
 
