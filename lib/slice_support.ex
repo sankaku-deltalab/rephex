@@ -118,6 +118,17 @@ defmodule Rephex.Slice.Support do
       end
 
       @doc """
+      Cancel async action.
+      """
+      @spec cancel_async(Socket.t(), module()) :: Socket.t()
+      def cancel_async(%Socket{} = socket, module) when is_atom(module) do
+        if Rephex.State.Support.propagated?(socket),
+          do: raise("Must start async on propagated state.")
+
+        Phoenix.LiveView.cancel_async(socket, module)
+      end
+
+      @doc """
       Set AsyncResult as loading.
 
       ## Example
