@@ -107,7 +107,8 @@ defmodule Rephex.Slice.Support do
           do: raise("Must start async on propagated state.")
 
         slice_state = get_slice(socket)
-        send_msg = fn msg -> send(self(), {Rephex.AsyncAction, module, msg}) end
+        liveview_pid = self()
+        send_msg = fn msg -> send(liveview_pid, {Rephex.AsyncAction, module, msg}) end
         fun_raw = &module.start_async/3
         fun_for_async = fn -> fun_raw.(slice_state, payload, send_msg) end
 
