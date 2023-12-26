@@ -19,8 +19,14 @@ defmodule Rephex.State do
         Support.init_state(socket, @__slices)
       end
 
+      @spec resolve_async(Socket.t(), any(), any()) :: Socket.t()
       def resolve_async(%Socket{} = socket, name, result) do
         Support.resolve_async(socket, @__async_modules, name, result)
+      end
+
+      @spec receive_message_from_async(Socket.t(), any()) :: Socket.t()
+      def receive_message_from_async(%Socket{} = socket, msg) do
+        Support.receive_message_from_async(socket, @__async_modules, msg)
       end
     end
   end
