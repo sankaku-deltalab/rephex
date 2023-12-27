@@ -99,8 +99,7 @@ defmodule Rephex.State.Support do
 
   @spec get_slice(Socket.t(), atom()) :: map()
   def get_slice(%Socket{} = socket, slice_name) when is_atom(slice_name) do
-    %Rephex.State{slices: slices} = socket.assigns[@root]
-    Map.fetch!(slices, slice_name)
+    get_slice_from_root(socket.assigns[@root], slice_name)
   end
 
   @spec put_slice(Socket.t(), atom(), slice_state()) :: Socket.t()
