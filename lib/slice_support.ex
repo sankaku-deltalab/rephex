@@ -68,24 +68,6 @@ defmodule Rephex.Slice.Support do
       end
 
       @doc """
-      Get Rephex slice from root state.
-
-      ## Example
-
-      ```ex
-      def count(root) do
-        root
-        |> Support.slice_in_root()
-        |> then(fn %State{count: c} -> c end)
-      end
-      ```
-      """
-      @spec slice_in_root(%Rephex.State{}) :: state()
-      def slice_in_root(%Rephex.State{} = root_state) do
-        Rephex.State.Support.get_slice_from_root(root_state, @slice_name)
-      end
-
-      @doc """
       Start async action.
 
       ## Example
