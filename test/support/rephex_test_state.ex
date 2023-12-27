@@ -91,7 +91,7 @@ defmodule RephexTest.Fixture.State.CounterSlice.AddCountAsync do
         {
           :continue,
           socket
-          |> Support.set_async_as_loading!(:loading_async)
+          |> Support.update_async!(:loading_async, loading: true)
         }
     end
   end
@@ -109,7 +109,7 @@ defmodule RephexTest.Fixture.State.CounterSlice.AddCountAsync do
       {:ok, amount} ->
         socket
         |> CounterSlice.add_count(amount)
-        |> Support.set_async_as_ok!(:loading_async, amount)
+        |> Support.update_async!(:loading_async, ok: amount)
 
       {:exit, _} ->
         socket

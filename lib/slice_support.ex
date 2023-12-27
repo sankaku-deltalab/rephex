@@ -124,53 +124,98 @@ defmodule Rephex.Slice.Support do
       @doc """
       Cancel async action.
       """
-      @spec cancel_async(Socket.t(), async_module()) :: Socket.t()
-      def cancel_async(%Socket{} = socket, module) when is_atom(module) do
+      @spec cancel_async(Socket.t(), async_module(), any()) :: Socket.t()
+      def cancel_async(%Socket{} = socket, module, reason \\ {:shutdown, :cancel})
+          when is_atom(module) do
         if Rephex.State.Support.propagated?(socket),
           do: raise("Must cancel async on propagated state.")
 
-        Phoenix.LiveView.cancel_async(socket, module)
+        Phoenix.LiveView.cancel_async(socket, module, reason)
       end
 
       @doc """
-      Set AsyncResult as loading.
+      Reset AsyncResult in state.
 
       ## Example
 
       ```ex
-      def load_video(%Socket{} = socket, _payload) do
+      # %State{video: %AsyncResult{}}
+      socket
+      |> Support.reset_async!(:video, ok: video_content)
+      |> Support.reset_async!(:video, failed: :video_not_found)
+      |> Support.reset_async!(:video, loading: %{progress: {0, 100}}})
+      |> Support.reset_async!(:video, loading: true})  # no progress
+      ```
+      """
+      def reset_async!(%Socket{} = socket, key, opt) do
+        update_slice(socket, fn state ->
+          case opt do
+            [ok: result] ->
+              %{state | key => AsyncResult.ok(result)}
+
+            [failed: reason] when reason != nil ->
+              %{state | key => AsyncResult.failed(state[key], reason)}
+
+            [loading: loading_state] when loading_state != nil ->
+              %{state | key => AsyncResult.loading(loading_state)}
+          end
+        end)
+      end
+
+      @doc """
+      Update AsyncResult in state.
+
+      ## Example
+
+      ```ex
+      # %State{video: %AsyncResult{}}
+      socket
+      |> Support.update_async!(:video, ok: video_content)
+      |> Support.update_async!(:video, failed: :video_not_found)
+      |> Support.update_async!(:video, loading: %{progress: {0, 100}}})
+      |> Support.update_async!(:video, loading: true})  # no progress
+      ```
+      """
+      def update_async!(%Socket{} = socket, key, opt) do
+        update_slice(socket, fn state ->
+          case opt do
+            [ok: result] ->
+              %{state | key => AsyncResult.ok(state[key], result)}
+
+            [failed: reason] when reason != nil ->
+              %{state | key => AsyncResult.failed(state[key], reason)}
+
+            [loading: loading_state] when loading_state != nil ->
+              %{state | key => AsyncResult.loading(state[key], loading_state)}
+          end
+        end)
+      end
+
+      @doc """
+      Update AsyncResult loading state.
+      If AsyncResult is not loading, it will do nothing.
+
+      ## Example
+
+      ```ex
+      def update_video_loading_progress(%Socket{} = socket, {_current, _max} = payload) do
         # %State{video: %AsyncResult{}}
 
         socket
-        |> Support.set_async_as_loading!(:video)
-        |> load_video_async()
+        |> Support.update_async_loading_state!(:video, payload)
       end
       ```
       """
-      @spec set_async_as_loading!(Socket.t(), atom()) :: Socket.t()
-      def set_async_as_loading!(%Socket{} = socket, key) do
+      @spec update_async_loading_state!(Socket.t(), atom(), any()) :: Socket.t()
+      def update_async_loading_state!(%Socket{} = socket, key, loading_state \\ true) do
         update_slice(socket, fn state ->
-          %{state | key => AsyncResult.loading(state[key])}
-        end)
-      end
+          new_async =
+            case state[key] do
+              %AsyncResult{loading: nil} = async -> async
+              _ = async -> AsyncResult.loading(async, loading_state)
+            end
 
-      @doc """
-      Set AsyncResult as ok.
-      """
-      @spec set_async_as_ok!(Socket.t(), atom(), any()) :: Socket.t()
-      def set_async_as_ok!(%Socket{} = socket, key, result) do
-        update_slice(socket, fn state ->
-          %{state | key => AsyncResult.ok(state[key], result)}
-        end)
-      end
-
-      @doc """
-      Set AsyncResult as failed.
-      """
-      @spec set_async_as_failed!(Socket.t(), atom(), any()) :: Socket.t()
-      def set_async_as_failed!(%Socket{} = socket, key, reason) do
-        update_slice(socket, fn state ->
-          %{state | key => AsyncResult.failed(state[key], reason)}
+          %{state | key => new_async}
         end)
       end
     end
