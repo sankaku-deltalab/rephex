@@ -19,14 +19,20 @@ defmodule Rephex.State do
         Support.init_state(socket, @__slices)
       end
 
-      @spec resolve_async(Socket.t(), any(), any()) :: Socket.t()
-      def resolve_async(%Socket{} = socket, name, result) do
-        Support.resolve_async(socket, @__async_modules, name, result)
+      @spec handle_async(
+              name :: atom(),
+              async_fun_result :: {:ok, term()} | {:exit, term()},
+              socket :: Socket.t()
+            ) :: {:noreply, Socket.t()}
+      def handle_async(name, async_fun_result, socket) do
+        socket = Support.resolve_async(socket, @__async_modules, name, async_fun_result)
+        {:noreply, socket}
       end
 
-      @spec receive_message_from_async(Socket.t(), any()) :: Socket.t()
-      def receive_message_from_async(%Socket{} = socket, msg) do
-        Support.receive_message_from_async(socket, @__async_modules, msg)
+      @spec handle_info(msg :: term(), socket :: Socket.t()) :: {:noreply, Socket.t()}
+      def handle_info(msg, socket) do
+        socket = Support.receive_message_from_async(socket, @__async_modules, msg)
+        {:noreply, socket}
       end
     end
   end
