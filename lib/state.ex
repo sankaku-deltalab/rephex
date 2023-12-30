@@ -19,21 +19,8 @@ defmodule Rephex.State do
         Support.init_state(socket, @__slices)
       end
 
-      @spec handle_async(
-              name :: atom(),
-              async_fun_result :: {:ok, term()} | {:exit, term()},
-              socket :: Socket.t()
-            ) :: {:noreply, Socket.t()}
-      def handle_async(name, async_fun_result, socket) do
-        socket = Support.resolve_async(socket, @__async_modules, name, async_fun_result)
-        {:noreply, socket}
-      end
-
-      @spec handle_info(msg :: term(), socket :: Socket.t()) :: {:noreply, Socket.t()}
-      def handle_info(msg, socket) do
-        socket = Support.receive_message_from_async(socket, @__async_modules, msg)
-        {:noreply, socket}
-      end
+      @spec slice_modules() :: [module()]
+      def slice_modules(), do: @__slices
     end
   end
 
@@ -66,41 +53,19 @@ defmodule Rephex.State.Support do
   @spec collect_async_modules([module()]) :: MapSet.t()
   def collect_async_modules(slice_modules) do
     slice_modules
-    |> Enum.flat_map(fn module ->
-      %{async_modules: async_modules} = module.slice_info()
-      async_modules
-    end)
+    |> get_async_module_to_slice_map()
+    |> Map.keys()
     |> MapSet.new()
   end
 
-  @spec resolve_async(Socket.t(), MapSet.t(async_module()), atom(), any()) :: any()
-  def resolve_async(%Socket{} = socket, %MapSet{} = async_modules, name, result) do
-    if propagated?(socket), do: raise("Must not resolve async on propagated state.")
-
-    if name in async_modules do
-      name.resolve(socket, result)
-    else
-      raise {:not_async_module, name}
-    end
-  end
-
-  @spec receive_message_from_async(
-          Socket.t(),
-          MapSet.t(async_module()),
-          {Rephex.AsyncAction, async_module(), any()}
-        ) :: Socket.t()
-  def receive_message_from_async(
-        %Socket{} = socket,
-        %MapSet{} = async_modules,
-        {Rephex.AsyncAction, module, content} = _message
-      ) do
-    if propagated?(socket), do: raise("Must not receive message in async on propagated state.")
-
-    if module in async_modules do
-      module.receive_message(socket, content)
-    else
-      raise {:not_async_module, module}
-    end
+  @spec get_async_module_to_slice_map([module()]) :: %{module() => module()}
+  def get_async_module_to_slice_map(slice_modules) do
+    slice_modules
+    |> Enum.flat_map(fn slice_module ->
+      %{async_modules: async_modules} = slice_module.slice_info()
+      Enum.map(async_modules, fn async_module -> {async_module, slice_module} end)
+    end)
+    |> Map.new()
   end
 
   @spec get_slice(Socket.t(), atom()) :: map()

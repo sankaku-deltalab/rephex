@@ -4,6 +4,8 @@ defmodule RephexTest.Fixture.State.CounterSlice do
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.Socket
 
+  alias RephexTest.Fixture.State.CounterSlice.AddCountAsync
+
   @type t :: %{count: integer(), loading_async: %AsyncResult{}, add_async_failed: boolean()}
   @initial_state %{
     count: 0,
@@ -14,8 +16,6 @@ defmodule RephexTest.Fixture.State.CounterSlice do
   defmodule Support do
     use Rephex.Slice.Support, name: :counter
   end
-
-  alias RephexTest.Fixture.State.CounterSlice.AddCountAsync
 
   @impl true
   def slice_info() do
@@ -38,15 +38,16 @@ defmodule RephexTest.Fixture.State.CounterSlice do
           payload :: %{amount: integer(), delay: non_neg_integer()}
         ) ::
           Socket.t()
-  def add_count_delayed(%Socket{} = socket, payload),
-    do: Support.start_async(socket, AddCountAsync, payload)
+  def add_count_delayed(%Socket{} = socket, %{amount: _, delay: _} = payload) do
+    Support.start_async(socket, AddCountAsync, payload)
+  end
+
+  @spec cancel_add_count_delayed(Socket.t(), any()) :: Socket.t()
+  def cancel_add_count_delayed(%Socket{} = socket, _payload) do
+    Support.cancel_async(socket, AddCountAsync)
+  end
 
   # Selector
-
-  @spec count(t()) :: integer()
-  def count(%{count: c} = _slice) do
-    c
-  end
 
   @spec loading_status(t()) :: :failed | :loading | :not_loaded | :ok
   def loading_status(%{loading_async: async} = _slice) do
@@ -117,9 +118,4 @@ defmodule RephexTest.Fixture.State.CounterSlice.AddCountAsync do
   def receive_message(%Socket{} = socket, _content) do
     socket
   end
-end
-
-defmodule RephexTest.Fixture.State do
-  alias RephexTest.Fixture.State.CounterSlice
-  use Rephex.State, slices: [CounterSlice]
 end
