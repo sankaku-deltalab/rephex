@@ -4,11 +4,12 @@ defmodule RephexTest.Fixture.TestLive.Index do
   import Rephex.Component
 
   alias Phoenix.LiveView.Socket
+  alias RephexTest.Fixture.State
   alias RephexTest.Fixture.State.CounterSlice
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok, socket |> State.init()}
   end
 
   @impl true
