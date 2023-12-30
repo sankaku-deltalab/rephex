@@ -1,4 +1,4 @@
-defmodule Rephex.LiveViewComponent do
+defmodule Rephex.RootComponent do
   alias Phoenix.LiveView.Socket
 
   defmacro __using__([state: state] = _opt) do
