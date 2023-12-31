@@ -31,7 +31,7 @@ defmodule Rephex.MixProject do
   defp deps do
     [
       {:phoenix, "~> 1.5"},
-      {:phoenix_live_view, "~> 0.20"},
+      {:phoenix_live_view, "~> 0.20.2"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
