@@ -8,6 +8,7 @@ defmodule Rephex.RootComponent do
                                )
       @__async_modules @__async_module_to_slice |> Map.keys()
 
+      @impl true
       def handle_info({Rephex.AsyncAction, async_module, content} = msg, %Socket{} = socket)
           when is_atom(async_module) do
         if Rephex.State.Support.propagated?(socket),
@@ -20,6 +21,7 @@ defmodule Rephex.RootComponent do
         end
       end
 
+      @impl true
       def handle_async(name, async_fun_result, %Socket{} = socket)
           when name in @__async_modules do
         if Rephex.State.Support.propagated?(socket),
