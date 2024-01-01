@@ -9,7 +9,7 @@ defmodule RephexTest do
   test "add count" do
     socket = Fixture.new_socket_with_slices() |> CounterSlice.add_count(%{amount: 1})
 
-    slice = Rephex.State.get_slice(socket, CounterSlice)
+    slice = Rephex.State.Support.get_slice!(socket, CounterSlice)
     assert slice.count == 1
   end
 
@@ -18,7 +18,7 @@ defmodule RephexTest do
       Fixture.new_socket_with_slices()
       |> CounterSlice.AddCountAsync.start(%{amount: 2, delay: 1000})
 
-    slice = Rephex.State.get_slice(socket, CounterSlice)
+    slice = Rephex.State.Support.get_slice!(socket, CounterSlice)
 
     assert slice.count == 0
     assert CounterSlice.loading_status(slice) == :loading
@@ -31,7 +31,7 @@ defmodule RephexTest do
       |> CounterSlice.Support.reset_async!(:loading_async, loading: true)
       |> CounterSlice.AddCountAsync.start(%{amount: 2, delay: 1000})
 
-    slice = Rephex.State.get_slice(socket, CounterSlice)
+    slice = Rephex.State.Support.get_slice!(socket, CounterSlice)
 
     assert slice.count == 0
     assert CounterSlice.loading_status(slice) == :loading

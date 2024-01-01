@@ -24,24 +24,48 @@ defmodule Rephex.State do
     end
   end
 
+  @type slice_state :: map()
+
   @spec propagate(t()) :: t()
   def propagate(%__MODULE__{} = rephex_state), do: %{rephex_state | root?: false}
 
-  @spec get_slice(Socket.t(), module()) :: map()
-  def get_slice(%Socket{} = socket, slice_module) when is_atom(slice_module) do
-    Support.get_slice(socket, slice_module)
+  @spec get_slice!(t(), module()) :: slice_state()
+  def get_slice!(%__MODULE__{slices: slices} = _, slice_module) when is_atom(slice_module) do
+    slices[slice_module]
+  end
+
+  @spec put_slice!(t(), module(), slice_state()) :: t()
+  def put_slice!(%__MODULE__{root?: root?, slices: slices} = root, slice_module, slice_state)
+      when is_atom(slice_module) do
+    if not root?, do: raise("Must not mutate propagated state.")
+
+    slices = Map.put(slices, slice_module, slice_state)
+    %Rephex.State{root | slices: slices}
+  end
+
+  @spec update_slice!(t(), module(), (slice_state() -> slice_state())) :: t()
+  def update_slice!(%__MODULE__{root?: root?, slices: slices} = root, slice_module, fun)
+      when is_atom(slice_module) and is_function(fun, 1) do
+    if not root?, do: raise("Must not mutate propagated state.")
+
+    slices = Map.update!(slices, slice_module, fun)
+    %Rephex.State{root | slices: slices}
   end
 end
 
 defmodule Rephex.State.Support do
+  @moduledoc """
+  Contain in-socket Rephex.State functions.
+  """
   alias Phoenix.LiveView.Socket
 
   @root Rephex.root()
 
   @type slice_state :: map()
+  @type slice_module :: module()
   @type async_module :: module()
 
-  @spec init_state(Socket.t(), [module()]) :: Socket.t()
+  @spec init_state(Socket.t(), [slice_module()]) :: Socket.t()
   def init_state(%Socket{} = socket, slice_modules) do
     slices =
       slice_modules
@@ -73,37 +97,29 @@ defmodule Rephex.State.Support do
     |> Map.new()
   end
 
-  @spec get_slice(Socket.t(), atom()) :: map()
-  def get_slice(%Socket{} = socket, slice_module) when is_atom(slice_module) do
-    get_slice_from_root(socket.assigns[@root], slice_module)
+  @spec get_slice!(Socket.t(), atom()) :: map()
+  def get_slice!(%Socket{} = socket, slice_module) when is_atom(slice_module) do
+    Rephex.State.get_slice!(socket.assigns[@root], slice_module)
   end
 
-  @spec put_slice(Socket.t(), atom(), slice_state()) :: Socket.t()
-  def put_slice(%Socket{} = socket, slice_module, %{} = state) when is_atom(slice_module) do
-    if propagated?(socket), do: raise("Must not mutate propagated state.")
-
-    Phoenix.Component.update(socket, @root, fn %Rephex.State{slices: slices} = root ->
-      slices = Map.put(slices, slice_module, state)
-      %Rephex.State{root | slices: slices}
-    end)
-  end
-
-  @spec update_slice(Socket.t(), atom(), (slice_state() -> slice_state())) :: map()
-  def update_slice(%Socket{} = socket, slice_module, fun)
-      when is_atom(slice_module) and is_function(fun, 1) do
-    if propagated?(socket), do: raise("Must not mutate propagated state.")
-
-    Phoenix.Component.update(socket, @root, fn %Rephex.State{slices: slices} = root ->
-      slices = Map.update!(slices, slice_module, fun)
-      %Rephex.State{root | slices: slices}
-    end)
-  end
-
-  @spec get_slice_from_root(Rephex.State.t(), atom()) :: map()
-  def get_slice_from_root(%Rephex.State{} = root_state, slice_module)
+  @spec put_slice!(Socket.t(), atom(), slice_state()) :: Socket.t()
+  def put_slice!(%Socket{} = socket, slice_module, %{} = slice_state)
       when is_atom(slice_module) do
-    %Rephex.State{slices: slices} = root_state
-    Map.fetch!(slices, slice_module)
+    Phoenix.Component.update(
+      socket,
+      @root,
+      &Rephex.State.put_slice!(&1, slice_module, slice_state)
+    )
+  end
+
+  @spec update_slice!(Socket.t(), atom(), (slice_state() -> slice_state())) :: map()
+  def update_slice!(%Socket{} = socket, slice_module, fun)
+      when is_atom(slice_module) and is_function(fun, 1) do
+    Phoenix.Component.update(
+      socket,
+      @root,
+      &Rephex.State.update_slice!(&1, slice_module, fun)
+    )
   end
 
   @spec propagated?(Socket.t()) :: boolean()

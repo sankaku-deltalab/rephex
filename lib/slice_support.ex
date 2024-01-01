@@ -94,7 +94,7 @@ defmodule Rephex.Slice.Support do
       """
       @spec init_slice(Socket.t(), state()) :: Socket.t()
       def init_slice(%Socket{} = socket, %{} = initial_state) do
-        Rephex.State.Support.put_slice(socket, @slice_module, initial_state)
+        Rephex.State.Support.put_slice!(socket, @slice_module, initial_state)
       end
 
       @doc """
@@ -112,7 +112,7 @@ defmodule Rephex.Slice.Support do
       """
       @spec update_slice(Socket.t(), (state() -> state())) :: Socket.t()
       def update_slice(%Socket{} = socket, func) do
-        Rephex.State.Support.update_slice(socket, @slice_module, func)
+        Rephex.State.Support.update_slice!(socket, @slice_module, func)
       end
 
       @doc """
@@ -120,7 +120,7 @@ defmodule Rephex.Slice.Support do
       """
       @spec get_slice(Socket.t()) :: state()
       def get_slice(%Socket{} = socket) do
-        Rephex.State.Support.get_slice(socket, @slice_module)
+        Rephex.State.Support.get_slice!(socket, @slice_module)
       end
 
       @doc """

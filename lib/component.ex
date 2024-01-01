@@ -15,7 +15,7 @@ defmodule Rephex.Component do
 
   def slice_component(assigns) do
     ~H"""
-    <%= render_slot(@inner_block, Rephex.State.Support.get_slice_from_root(@root, @slice)) %>
+    <%= render_slot(@inner_block, Rephex.State.get_slice!(@root, @slice)) %>
     """
   end
 end

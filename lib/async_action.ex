@@ -35,7 +35,7 @@ defmodule Rephex.AsyncAction do
     if Rephex.State.Support.propagated?(socket),
       do: raise("Must start async on propagated state.")
 
-    slice_state = Rephex.State.get_slice(socket, slice_module)
+    slice_state = Rephex.State.Support.get_slice!(socket, slice_module)
     lv_pid = self()
     send_msg = fn msg -> send(lv_pid, {Rephex.AsyncAction, slice_module, msg}) end
     fun_for_async = fn -> async_module.start_async.(slice_state, payload, send_msg) end
