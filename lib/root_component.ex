@@ -12,7 +12,7 @@ defmodule Rephex.RootComponent do
       @impl true
       def handle_info({Rephex.AsyncAction, async_module, content} = msg, %Socket{} = socket)
           when is_atom(async_module) do
-        Support.handle_async_action(msg, socket, async_module_to_slice: @__async_module_to_slice)
+        Support.handle_async_message(msg, socket, async_module_to_slice: @__async_module_to_slice)
       end
 
       @impl true
@@ -32,7 +32,7 @@ end
 defmodule Rephex.RootComponent.Support do
   alias Phoenix.LiveView.Socket
 
-  def handle_async_action(
+  def handle_async_message(
         {Rephex.AsyncAction, async_module, content} = _msg,
         %Socket{} = socket,
         async_module_to_slice: %{} = async_module_to_slice
