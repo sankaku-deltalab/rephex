@@ -1,10 +1,12 @@
 defmodule Rephex.Component do
   use Phoenix.Component
 
+  alias Phoenix.LiveView.Socket
+
   @doc """
   Example:
   ```html
-  <.slice_component :let={counter_slice} root={@__rephex__} slice={:counter}>
+  <.slice_component :let={counter_slice} root={@__rephex__} slice={CounterSlice}>
     <span>Count: {counter_slice.count()}</span>
   </.slice_component>
   ```
@@ -17,5 +19,26 @@ defmodule Rephex.Component do
     ~H"""
     <%= render_slot(@inner_block, Rephex.State.get_slice!(@root, @slice)) %>
     """
+  end
+
+  @doc """
+  Assign rephex state to socket assigns in LiveComponent.
+  WARN: Do NOT use this function in LiveView (root).
+
+  Example:
+
+  ```ex
+  def update(%{__rephex__: _} = assigns, socket) do
+    {:ok,
+     socket
+     |> propagate_rephex(assigns)
+     |> assign(other_state)}
+  end
+  ```
+  """
+  @spec propagate_rephex(Socket.t(), %{__rephex__: %Rephex.State{}}) :: Socket.t()
+  def propagate_rephex(%Socket{} = socket, %{__rephex__: %Rephex.State{} = root} = _assigns) do
+    socket
+    |> assign(Rephex.root(), Rephex.State.propagate(root))
   end
 end
