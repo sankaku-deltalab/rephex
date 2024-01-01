@@ -19,12 +19,12 @@ defmodule RephexTest.Fixture.TestLive.Index do
 
   @impl true
   def handle_event("add_count_async_2", _params, %Socket{} = socket) do
-    {:noreply, socket |> CounterSlice.add_count_delayed(%{amount: 2, delay: 1000})}
+    {:noreply, socket |> CounterSlice.AddCountAsync.start(%{amount: 2, delay: 1000})}
   end
 
   @impl true
   def handle_event("cancel_add_count_async_2", _params, %Socket{} = socket) do
-    {:noreply, socket |> CounterSlice.cancel_add_count_delayed(%{})}
+    {:noreply, socket |> CounterSlice.AddCountAsync.cancel()}
   end
 
   @impl true

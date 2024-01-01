@@ -1,4 +1,7 @@
 defmodule Rephex.State do
+  alias Rephex.State.Support
+  alias Phoenix.LiveView.Socket
+
   @type t :: %__MODULE__{
           root?: boolean(),
           slices: %{atom() => map()}
@@ -8,9 +11,6 @@ defmodule Rephex.State do
 
   defmacro __using__([slices: slices] = _opt) when is_list(slices) do
     quote do
-      alias Rephex.State.Support
-      alias Phoenix.LiveView.Socket
-
       @__slices unquote(slices)
       @__async_modules Support.collect_async_modules(@__slices)
 
@@ -26,6 +26,11 @@ defmodule Rephex.State do
 
   @spec propagate(t()) :: t()
   def propagate(%__MODULE__{} = rephex_state), do: %{rephex_state | root?: false}
+
+  @spec get_slice(Socket.t(), module()) :: map()
+  def get_slice(%Socket{} = socket, slice_module) when is_atom(slice_module) do
+    Support.get_slice(socket, slice_module)
+  end
 end
 
 defmodule Rephex.State.Support do

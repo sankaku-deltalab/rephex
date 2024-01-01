@@ -5,5 +5,55 @@ defmodule Rephex.AsyncAction do
               {:continue, Socket.t()} | {:abort, Socket.t()}
   @callback start_async(state :: map(), payload :: map(), send_msg :: (any() -> any())) :: any()
   @callback resolve(socket :: Socket.t(), result :: {:ok, any()} | {:exit, any()}) :: Socket.t()
-  @callback receive_message(socket :: Socket.t(), content :: any()) :: Socket.t()
+  @callback receive_message(socket :: Socket.t(), message :: any()) :: Socket.t()
+
+  defmacro __using__([slice: slice_module] = _opt) do
+    quote do
+      @behaviour Rephex.AsyncAction
+      @__slice_module unquote(slice_module)
+
+      @spec start(Socket.t(), payload()) :: any()
+      def start(socket, payload) do
+        Rephex.AsyncAction.start_async_action(socket, payload,
+          slice_module: @__slice_module,
+          async_module: __MODULE__
+        )
+      end
+
+      @spec cancel(Socket.t(), any()) :: Socket.t()
+      def cancel(%Socket{} = socket, reason \\ {:shutdown, :cancel}) do
+        Rephex.AsyncAction.cancel_async_action(socket,
+          slice_module: @__slice_module,
+          reason: reason
+        )
+      end
+    end
+  end
+
+  def start_async_action(socket, payload, slice_module: slice_module, async_module: async_module)
+      when is_atom(slice_module) do
+    if Rephex.State.Support.propagated?(socket),
+      do: raise("Must start async on propagated state.")
+
+    slice_state = Rephex.State.get_slice(socket, slice_module)
+    lv_pid = self()
+    send_msg = fn msg -> send(lv_pid, {Rephex.AsyncAction, slice_module, msg}) end
+    fun_for_async = fn -> async_module.start_async.(slice_state, payload, send_msg) end
+
+    case async_module.before_async(socket, payload) do
+      {:continue, %Socket{} = socket} ->
+        Phoenix.LiveView.start_async(socket, slice_module, fun_for_async)
+
+      {:abort, %Socket{} = socket} ->
+        socket
+    end
+  end
+
+  def cancel_async_action(%Socket{} = socket, slice_module: slice_module, reason: reason)
+      when is_atom(slice_module) do
+    if Rephex.State.Support.propagated?(socket),
+      do: raise("Must cancel async on propagated state.")
+
+    Phoenix.LiveView.cancel_async(socket, slice_module, reason)
+  end
 end
