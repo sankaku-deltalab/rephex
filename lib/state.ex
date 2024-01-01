@@ -78,16 +78,6 @@ defmodule Rephex.State.Support do
     |> Phoenix.Component.assign(@root, %Rephex.State{root?: true, slices: slices})
   end
 
-  @spec get_async_module_to_slice_map([module()]) :: %{module() => module()}
-  def get_async_module_to_slice_map(slice_modules) do
-    slice_modules
-    |> Enum.flat_map(fn slice_module ->
-      %{async_modules: async_modules} = slice_module.slice_info()
-      Enum.map(async_modules, fn async_module -> {async_module, slice_module} end)
-    end)
-    |> Map.new()
-  end
-
   @spec get_slice!(Socket.t(), atom()) :: map()
   def get_slice!(%Socket{} = socket, slice_module) when is_atom(slice_module) do
     Rephex.State.get_slice!(socket.assigns[@root], slice_module)

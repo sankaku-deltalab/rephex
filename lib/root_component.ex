@@ -4,7 +4,7 @@ defmodule Rephex.RootComponent do
 
   defmacro __using__([state: state] = _opt) do
     quote do
-      @__async_module_to_slice Rephex.State.Support.get_async_module_to_slice_map(
+      @__async_module_to_slice Rephex.Slice.get_async_module_to_slice_map(
                                  unquote(state).slice_modules()
                                )
       @__async_modules @__async_module_to_slice |> Map.keys()
