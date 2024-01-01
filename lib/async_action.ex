@@ -46,7 +46,7 @@ defmodule Rephex.AsyncAction do
         fun_raw = &async_module.start_async/3
         fun_for_async = fn -> fun_raw.(slice_state, payload, send_msg) end
 
-        Phoenix.LiveView.start_async(socket, slice_module, fun_for_async)
+        Phoenix.LiveView.start_async(socket, async_module, fun_for_async)
 
       {:abort, %Socket{} = socket} ->
         socket
