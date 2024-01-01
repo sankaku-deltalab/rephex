@@ -2,6 +2,70 @@ defmodule Rephex.Slice.Support do
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.Socket
 
+  def start_async(%Socket{} = socket, module, payload, get_slice: get_slice)
+      when is_atom(module) and is_function(get_slice, 1) do
+    if Rephex.State.Support.propagated?(socket),
+      do: raise("Must start async on propagated state.")
+
+    slice_state = get_slice.(socket)
+    liveview_pid = self()
+    send_msg = fn msg -> send(liveview_pid, {Rephex.AsyncAction, module, msg}) end
+    fun_raw = &module.start_async/3
+    fun_for_async = fn -> fun_raw.(slice_state, payload, send_msg) end
+
+    case module.before_async(socket, payload) do
+      {:continue, %Socket{} = socket} ->
+        Phoenix.LiveView.start_async(socket, module, fun_for_async)
+
+      {:abort, %Socket{} = socket} ->
+        socket
+    end
+  end
+
+  def cancel_async(%Socket{} = socket, module, reason \\ {:shutdown, :cancel})
+      when is_atom(module) do
+    if Rephex.State.Support.propagated?(socket),
+      do: raise("Must cancel async on propagated state.")
+
+    Phoenix.LiveView.cancel_async(socket, module, reason)
+  end
+
+  def reset_async!(slice_state, key, opt) do
+    case opt do
+      [ok: result] ->
+        %{slice_state | key => AsyncResult.ok(result)}
+
+      [failed: reason] when reason != nil ->
+        %{slice_state | key => AsyncResult.failed(slice_state[key], reason)}
+
+      [loading: loading_state] when loading_state != nil ->
+        %{slice_state | key => AsyncResult.loading(loading_state)}
+    end
+  end
+
+  def update_async!(slice_state, key, opt) do
+    case opt do
+      [ok: result] ->
+        %{slice_state | key => AsyncResult.ok(slice_state[key], result)}
+
+      [failed: reason] when reason != nil ->
+        %{slice_state | key => AsyncResult.failed(slice_state[key], reason)}
+
+      [loading: loading_state] when loading_state != nil ->
+        %{slice_state | key => AsyncResult.loading(slice_state[key], loading_state)}
+    end
+  end
+
+  def update_async_loading_state!(slice_state, key, loading_state \\ true) do
+    new_async =
+      case slice_state[key] do
+        %AsyncResult{loading: nil} = async -> async
+        _ = async -> AsyncResult.loading(async, loading_state)
+      end
+
+    %{slice_state | key => new_async}
+  end
+
   defmacro __using__([name: slice_name] = _opt) do
     quote do
       @root Rephex.root()
@@ -85,22 +149,7 @@ defmodule Rephex.Slice.Support do
       """
       @spec start_async(Socket.t(), async_module(), map()) :: Socket.t()
       def start_async(%Socket{} = socket, module, payload) when is_atom(module) do
-        if Rephex.State.Support.propagated?(socket),
-          do: raise("Must start async on propagated state.")
-
-        slice_state = get_slice(socket)
-        liveview_pid = self()
-        send_msg = fn msg -> send(liveview_pid, {Rephex.AsyncAction, module, msg}) end
-        fun_raw = &module.start_async/3
-        fun_for_async = fn -> fun_raw.(slice_state, payload, send_msg) end
-
-        case module.before_async(socket, payload) do
-          {:continue, %Socket{} = socket} ->
-            Phoenix.LiveView.start_async(socket, module, fun_for_async)
-
-          {:abort, %Socket{} = socket} ->
-            socket
-        end
+        Rephex.Slice.Support.start_async(socket, module, payload, get_slice: &get_slice/1)
       end
 
       @doc """
@@ -109,10 +158,7 @@ defmodule Rephex.Slice.Support do
       @spec cancel_async(Socket.t(), async_module(), any()) :: Socket.t()
       def cancel_async(%Socket{} = socket, module, reason \\ {:shutdown, :cancel})
           when is_atom(module) do
-        if Rephex.State.Support.propagated?(socket),
-          do: raise("Must cancel async on propagated state.")
-
-        Phoenix.LiveView.cancel_async(socket, module, reason)
+        Rephex.Slice.Support.cancel_async(socket, module, reason)
       end
 
       @doc """
@@ -131,16 +177,7 @@ defmodule Rephex.Slice.Support do
       """
       def reset_async!(%Socket{} = socket, key, opt) do
         update_slice(socket, fn state ->
-          case opt do
-            [ok: result] ->
-              %{state | key => AsyncResult.ok(result)}
-
-            [failed: reason] when reason != nil ->
-              %{state | key => AsyncResult.failed(state[key], reason)}
-
-            [loading: loading_state] when loading_state != nil ->
-              %{state | key => AsyncResult.loading(loading_state)}
-          end
+          Rephex.Slice.Support.reset_async!(state, key, opt)
         end)
       end
 
@@ -160,16 +197,7 @@ defmodule Rephex.Slice.Support do
       """
       def update_async!(%Socket{} = socket, key, opt) do
         update_slice(socket, fn state ->
-          case opt do
-            [ok: result] ->
-              %{state | key => AsyncResult.ok(state[key], result)}
-
-            [failed: reason] when reason != nil ->
-              %{state | key => AsyncResult.failed(state[key], reason)}
-
-            [loading: loading_state] when loading_state != nil ->
-              %{state | key => AsyncResult.loading(state[key], loading_state)}
-          end
+          Rephex.Slice.Support.update_async!(state, key, opt)
         end)
       end
 
@@ -191,13 +219,7 @@ defmodule Rephex.Slice.Support do
       @spec update_async_loading_state!(Socket.t(), atom(), any()) :: Socket.t()
       def update_async_loading_state!(%Socket{} = socket, key, loading_state \\ true) do
         update_slice(socket, fn state ->
-          new_async =
-            case state[key] do
-              %AsyncResult{loading: nil} = async -> async
-              _ = async -> AsyncResult.loading(async, loading_state)
-            end
-
-          %{state | key => new_async}
+          Rephex.Slice.Support.update_async_loading_state!(state, key, loading_state)
         end)
       end
     end
