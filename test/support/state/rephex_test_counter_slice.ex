@@ -14,12 +14,12 @@ defmodule RephexTest.Fixture.State.CounterSlice do
   }
 
   defmodule Support do
-    use Rephex.Slice.Support, name: :counter
+    use Rephex.Slice.Support, slice: RephexTest.Fixture.State.CounterSlice
   end
 
   @impl true
   def slice_info() do
-    %{name: :counter, initial_state: @initial_state, async_modules: [AddCountAsync]}
+    %{initial_state: @initial_state, async_modules: [AddCountAsync]}
   end
 
   # Action

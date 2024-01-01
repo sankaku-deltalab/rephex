@@ -30,7 +30,7 @@ defmodule RephexTest.Fixture.TestLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <.slice_component :let={slice} root={@__rephex__} name={:counter}>
+    <.slice_component :let={slice} root={@__rephex__} slice={CounterSlice}>
       <div>Count: <%= slice.count %></div>
 
       <button phx-click="add_count_1">[Add 1]</button>

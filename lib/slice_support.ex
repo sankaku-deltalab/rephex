@@ -66,12 +66,12 @@ defmodule Rephex.Slice.Support do
     %{slice_state | key => new_async}
   end
 
-  defmacro __using__([name: slice_name] = _opt) do
+  defmacro __using__([slice: slice_module] = _opt) do
     quote do
       @root Rephex.root()
-      @slice_name unquote(slice_name)
+      @slice_module unquote(slice_module)
 
-      @type slice_name :: unquote(slice_name)
+      @type slice_module :: unquote(slice_module)
       @type state :: map()
       @type async_module :: module()
 
@@ -94,7 +94,7 @@ defmodule Rephex.Slice.Support do
       """
       @spec init_slice(Socket.t(), state()) :: Socket.t()
       def init_slice(%Socket{} = socket, %{} = initial_state) do
-        Rephex.State.Support.put_slice(socket, @slice_name, initial_state)
+        Rephex.State.Support.put_slice(socket, @slice_module, initial_state)
       end
 
       @doc """
@@ -112,7 +112,7 @@ defmodule Rephex.Slice.Support do
       """
       @spec update_slice(Socket.t(), (state() -> state())) :: Socket.t()
       def update_slice(%Socket{} = socket, func) do
-        Rephex.State.Support.update_slice(socket, @slice_name, func)
+        Rephex.State.Support.update_slice(socket, @slice_module, func)
       end
 
       @doc """
@@ -120,7 +120,7 @@ defmodule Rephex.Slice.Support do
       """
       @spec get_slice(Socket.t()) :: state()
       def get_slice(%Socket{} = socket) do
-        Rephex.State.Support.get_slice(socket, @slice_name)
+        Rephex.State.Support.get_slice(socket, @slice_module)
       end
 
       @doc """

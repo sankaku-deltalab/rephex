@@ -41,8 +41,8 @@ defmodule Rephex.State.Support do
     slices =
       slice_modules
       |> Enum.map(fn module ->
-        %{name: name, initial_state: initial_state} = module.slice_info()
-        {name, initial_state}
+        %{initial_state: initial_state} = module.slice_info()
+        {module, initial_state}
       end)
       |> Map.new()
 
@@ -69,35 +69,36 @@ defmodule Rephex.State.Support do
   end
 
   @spec get_slice(Socket.t(), atom()) :: map()
-  def get_slice(%Socket{} = socket, slice_name) when is_atom(slice_name) do
-    get_slice_from_root(socket.assigns[@root], slice_name)
+  def get_slice(%Socket{} = socket, slice_module) when is_atom(slice_module) do
+    get_slice_from_root(socket.assigns[@root], slice_module)
   end
 
   @spec put_slice(Socket.t(), atom(), slice_state()) :: Socket.t()
-  def put_slice(%Socket{} = socket, slice_name, %{} = state) when is_atom(slice_name) do
+  def put_slice(%Socket{} = socket, slice_module, %{} = state) when is_atom(slice_module) do
     if propagated?(socket), do: raise("Must not mutate propagated state.")
 
     Phoenix.Component.update(socket, @root, fn %Rephex.State{slices: slices} = root ->
-      slices = Map.put(slices, slice_name, state)
+      slices = Map.put(slices, slice_module, state)
       %Rephex.State{root | slices: slices}
     end)
   end
 
   @spec update_slice(Socket.t(), atom(), (slice_state() -> slice_state())) :: map()
-  def update_slice(%Socket{} = socket, slice_name, fun)
-      when is_atom(slice_name) and is_function(fun, 1) do
+  def update_slice(%Socket{} = socket, slice_module, fun)
+      when is_atom(slice_module) and is_function(fun, 1) do
     if propagated?(socket), do: raise("Must not mutate propagated state.")
 
     Phoenix.Component.update(socket, @root, fn %Rephex.State{slices: slices} = root ->
-      slices = Map.update!(slices, slice_name, fun)
+      slices = Map.update!(slices, slice_module, fun)
       %Rephex.State{root | slices: slices}
     end)
   end
 
   @spec get_slice_from_root(Rephex.State.t(), atom()) :: map()
-  def get_slice_from_root(%Rephex.State{} = root_state, slice_name) when is_atom(slice_name) do
+  def get_slice_from_root(%Rephex.State{} = root_state, slice_module)
+      when is_atom(slice_module) do
     %Rephex.State{slices: slices} = root_state
-    Map.fetch!(slices, slice_name)
+    Map.fetch!(slices, slice_module)
   end
 
   @spec propagated?(Socket.t()) :: boolean()
