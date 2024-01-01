@@ -6,11 +6,14 @@ defmodule Rephex.AsyncAction do
   @callback start_async(state :: map(), payload :: map(), send_msg :: (any() -> any())) :: any()
   @callback resolve(socket :: Socket.t(), result :: {:ok, any()} | {:exit, any()}) :: Socket.t()
   @callback receive_message(socket :: Socket.t(), message :: any()) :: Socket.t()
+  @callback canceled(socket :: Socket.t(), reason :: any()) :: Socket.t()
 
   defmacro __using__([slice: slice_module] = _opt) do
     quote do
       @behaviour Rephex.AsyncAction
       @__slice_module unquote(slice_module)
+
+      # NOTE: `@type payload` must be defined.
 
       @spec start(Socket.t(), payload()) :: any()
       def start(socket, payload) do
@@ -54,6 +57,8 @@ defmodule Rephex.AsyncAction do
     if Rephex.State.Support.propagated?(socket),
       do: raise("Must cancel async on propagated state.")
 
-    Phoenix.LiveView.cancel_async(socket, slice_module, reason)
+    socket
+    |> Phoenix.LiveView.cancel_async(slice_module, reason)
+    |> slice_module.canceled(reason)
   end
 end

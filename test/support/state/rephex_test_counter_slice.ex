@@ -95,4 +95,9 @@ defmodule RephexTest.Fixture.State.CounterSlice.AddCountAsync do
   def receive_message(%Socket{} = socket, _content) do
     socket
   end
+
+  @impl true
+  def canceled(%Socket{} = socket, _reason) do
+    socket
+  end
 end
