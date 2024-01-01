@@ -12,7 +12,6 @@ defmodule Rephex.State do
   defmacro __using__([slices: slices] = _opt) when is_list(slices) do
     quote do
       @__slices unquote(slices)
-      @__async_modules Support.collect_async_modules(@__slices)
 
       @spec init(Socket.t()) :: Socket.t()
       def init(%Socket{} = socket) do
@@ -77,14 +76,6 @@ defmodule Rephex.State.Support do
 
     socket
     |> Phoenix.Component.assign(@root, %Rephex.State{root?: true, slices: slices})
-  end
-
-  @spec collect_async_modules([module()]) :: MapSet.t()
-  def collect_async_modules(slice_modules) do
-    slice_modules
-    |> get_async_module_to_slice_map()
-    |> Map.keys()
-    |> MapSet.new()
   end
 
   @spec get_async_module_to_slice_map([module()]) :: %{module() => module()}
