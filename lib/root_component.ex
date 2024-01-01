@@ -12,12 +12,12 @@ defmodule Rephex.RootComponent do
       @impl true
       def handle_info({Rephex.AsyncAction, async_module, content} = msg, %Socket{} = socket)
           when is_atom(async_module) do
-        Support.handle_info(msg, socket, async_module_to_slice: @__async_module_to_slice)
+        Support.handle_async_action(msg, socket, async_module_to_slice: @__async_module_to_slice)
       end
 
       @impl true
       def handle_info({{Rephex.LiveComponent, :call_in_root}, fun} = msg, %Socket{} = socket) do
-        Support.handle_info(msg, socket, %{})
+        Support.handle_call_in_root(msg, socket)
       end
 
       @impl true
@@ -32,7 +32,7 @@ end
 defmodule Rephex.RootComponent.Support do
   alias Phoenix.LiveView.Socket
 
-  def handle_info(
+  def handle_async_action(
         {Rephex.AsyncAction, async_module, content} = _msg,
         %Socket{} = socket,
         async_module_to_slice: %{} = async_module_to_slice
@@ -41,17 +41,15 @@ defmodule Rephex.RootComponent.Support do
     if Rephex.State.Support.propagated?(socket),
       do: raise("Must not receive message in async on propagated state.")
 
-    if Map.has_key?(async_module_to_slice, async_module) do
-      {:noreply, async_module.receive_message(socket, content)}
-    else
-      raise {:not_async_module, async_module}
-    end
+    if not Map.has_key?(async_module_to_slice, async_module),
+      do: raise({:not_async_module, async_module})
+
+    {:noreply, async_module.receive_message(socket, content)}
   end
 
-  def handle_info(
+  def handle_call_in_root(
         {{Rephex.LiveComponent, :call_in_root}, fun} = _msg,
-        %Socket{} = socket,
-        _opt
+        %Socket{} = socket
       ) do
     if Rephex.State.Support.propagated?(socket),
       do: raise("Must not receive message in async on propagated state.")
