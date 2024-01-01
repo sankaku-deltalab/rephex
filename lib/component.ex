@@ -41,4 +41,23 @@ defmodule Rephex.Component do
     socket
     |> assign(Rephex.root(), Rephex.State.propagate(root))
   end
+
+  @doc """
+  Call function in root LiveView.
+
+  Example:
+
+  ```ex
+  def handle_event("event_in_component", params, socket) do
+    {:noreply,
+     socket
+     |> call_in_root(&mutate_function(&1, params))}
+  end
+  ```
+  """
+  @spec call_in_root(v, (Socket.t() -> Socket.t())) :: v when v: any()
+  def call_in_root(any, fun) when is_function(fun, 1) do
+    send(self(), {{Rephex.LiveComponent, :call_in_root}, fun})
+    any
+  end
 end

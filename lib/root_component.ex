@@ -16,6 +16,11 @@ defmodule Rephex.RootComponent do
       end
 
       @impl true
+      def handle_info({{Rephex.LiveComponent, :call_in_root}, fun} = msg, %Socket{} = socket) do
+        Support.handle_info(msg, socket, %{})
+      end
+
+      @impl true
       def handle_async(name, async_fun_result, %Socket{} = socket)
           when name in @__async_modules do
         Support.handle_async(name, async_fun_result, socket)
@@ -41,6 +46,19 @@ defmodule Rephex.RootComponent.Support do
     else
       raise {:not_async_module, async_module}
     end
+  end
+
+  def handle_info(
+        {{Rephex.LiveComponent, :call_in_root}, fun} = _msg,
+        %Socket{} = socket,
+        _opt
+      ) do
+    if Rephex.State.Support.propagated?(socket),
+      do: raise("Must not receive message in async on propagated state.")
+
+    if not is_function(fun, 1), do: raise({:not_function, fun})
+
+    {:noreply, fun.(socket)}
   end
 
   def handle_async(name, async_fun_result, %Socket{} = socket) do
