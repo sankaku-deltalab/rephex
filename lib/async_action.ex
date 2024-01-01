@@ -27,6 +27,7 @@ defmodule Rephex.AsyncAction do
       def cancel(%Socket{} = socket, reason \\ {:shutdown, :cancel}) do
         Rephex.AsyncAction.cancel_async_action(socket,
           slice_module: @__slice_module,
+          async_module: __MODULE__,
           reason: reason
         )
       end
@@ -53,13 +54,17 @@ defmodule Rephex.AsyncAction do
     end
   end
 
-  def cancel_async_action(%Socket{} = socket, slice_module: slice_module, reason: reason)
-      when is_atom(slice_module) do
+  def cancel_async_action(%Socket{} = socket,
+        slice_module: slice_module,
+        async_module: async_module,
+        reason: reason
+      )
+      when is_atom(slice_module) and is_atom(async_module) do
     if Rephex.State.Support.propagated?(socket),
       do: raise("Must cancel async on propagated state.")
 
     socket
-    |> Phoenix.LiveView.cancel_async(slice_module, reason)
-    |> slice_module.canceled(reason)
+    |> Phoenix.LiveView.cancel_async(async_module, reason)
+    |> async_module.canceled(reason)
   end
 end
