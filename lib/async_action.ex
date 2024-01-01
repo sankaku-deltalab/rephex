@@ -38,13 +38,14 @@ defmodule Rephex.AsyncAction do
     if Rephex.State.Support.propagated?(socket),
       do: raise("Must start async on propagated state.")
 
-    slice_state = Rephex.State.Support.get_slice!(socket, slice_module)
-    lv_pid = self()
-    send_msg = fn msg -> send(lv_pid, {Rephex.AsyncAction, slice_module, msg}) end
-    fun_for_async = fn -> async_module.start_async.(slice_state, payload, send_msg) end
-
     case async_module.before_async(socket, payload) do
       {:continue, %Socket{} = socket} ->
+        slice_state = Rephex.State.Support.get_slice!(socket, slice_module)
+        lv_pid = self()
+        send_msg = fn msg -> send(lv_pid, {Rephex.AsyncAction, slice_module, msg}) end
+        fun_raw = &async_module.start_async/3
+        fun_for_async = fn -> fun_raw.(slice_state, payload, send_msg) end
+
         Phoenix.LiveView.start_async(socket, slice_module, fun_for_async)
 
       {:abort, %Socket{} = socket} ->
