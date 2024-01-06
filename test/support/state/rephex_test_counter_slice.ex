@@ -97,7 +97,7 @@ defmodule RephexTest.Fixture.State.CounterSlice.AddCountAsync do
   end
 
   @impl true
-  def canceled(%Socket{} = socket, _reason) do
-    socket
+  def before_cancel(%Socket{} = socket, _reason) do
+    {:continue, socket}
   end
 end

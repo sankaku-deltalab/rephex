@@ -6,7 +6,8 @@ defmodule Rephex.AsyncAction do
   @callback start_async(state :: map(), payload :: map(), send_msg :: (any() -> any())) :: any()
   @callback resolve(socket :: Socket.t(), result :: {:ok, any()} | {:exit, any()}) :: Socket.t()
   @callback receive_message(socket :: Socket.t(), message :: any()) :: Socket.t()
-  @callback canceled(socket :: Socket.t(), reason :: any()) :: Socket.t()
+  @callback before_cancel(socket :: Socket.t(), reason :: any()) ::
+              {:continue, Socket.t()} | {:abort, Socket.t()}
 
   defmacro __using__([slice: slice_module] = _opt) do
     quote do
@@ -63,8 +64,12 @@ defmodule Rephex.AsyncAction do
     if Rephex.State.Support.propagated?(socket),
       do: raise("Must cancel async on propagated state.")
 
-    socket
-    |> Phoenix.LiveView.cancel_async(async_module, reason)
-    |> async_module.canceled(reason)
+    case async_module.before_cancel(socket, reason) do
+      {:continue, %Socket{} = socket} ->
+        Phoenix.LiveView.cancel_async(socket, async_module, reason)
+
+      {:abort, %Socket{} = socket} ->
+        socket
+    end
   end
 end
