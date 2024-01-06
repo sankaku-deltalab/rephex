@@ -101,6 +101,22 @@ defmodule Rephex.Slice do
         end
 
         @doc """
+        Update Rephex slice by `update_in/3`.
+
+        ## Example
+
+        ```ex
+        def add_count(%Socket{} = socket, %{amount: am}) do
+          update_slice_in(socket, [:count], &(&1 + am))
+        end
+        ```
+        """
+        @spec update_slice_in(Socket.t(), [any()], (any() -> any())) :: Socket.t()
+        def update_slice_in(%Socket{} = socket, keys, fun) when is_function(fun, 1) do
+          Rephex.State.Support.update_slice!(socket, @slice_module, &update_in(&1, keys, fun))
+        end
+
+        @doc """
         Get Rephex slice from socket.
         """
         @spec get_slice(Socket.t()) :: state()

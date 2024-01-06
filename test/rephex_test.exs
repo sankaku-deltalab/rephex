@@ -13,6 +13,16 @@ defmodule RephexTest do
     assert slice.count == 1
   end
 
+  test "mlt count" do
+    socket =
+      Fixture.new_socket_with_slices()
+      |> CounterSlice.add_count(%{amount: 1})
+      |> CounterSlice.mlt_count(%{mlt: 2})
+
+    slice = Rephex.State.Support.get_slice!(socket, CounterSlice)
+    assert slice.count == 2
+  end
+
   test "continue add count delayed" do
     socket =
       Fixture.new_socket_with_slices()

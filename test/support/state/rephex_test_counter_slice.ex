@@ -22,6 +22,11 @@ defmodule RephexTest.Fixture.State.CounterSlice do
     end)
   end
 
+  @spec mlt_count(Socket.t(), %{mlt: integer()}) :: Socket.t()
+  def mlt_count(%Socket{} = socket, %{mlt: mlt} = _payload) when is_integer(mlt) do
+    Support.update_slice_in(socket, [:count], &(&1 * mlt))
+  end
+
   # Selector
 
   @spec loading_status(t()) :: :failed | :loading | :not_loaded | :ok
