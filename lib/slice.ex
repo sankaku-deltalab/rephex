@@ -96,8 +96,8 @@ defmodule Rephex.Slice do
         ```
         """
         @spec update_slice(Socket.t(), (state() -> state())) :: Socket.t()
-        def update_slice(%Socket{} = socket, func) do
-          Rephex.State.Support.update_slice!(socket, @slice_module, func)
+        def update_slice(%Socket{} = socket, fun) do
+          Rephex.State.Support.update_slice!(socket, @slice_module, fun)
         end
 
         @doc """
