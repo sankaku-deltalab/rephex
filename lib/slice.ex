@@ -122,7 +122,21 @@ defmodule Rephex.Slice do
         |> Support.reset_async!(:video, loading: true})  # no progress
         ```
         """
-        def reset_async!(%Socket{} = socket, key, opt) do
+        @spec reset_async!(
+                Socket.t(),
+                atom(),
+                [ok: any()] | [failed: any()] | [loading: any()]
+              ) :: Socket.t()
+        def reset_async!(%Socket{} = socket, key, ok: result),
+          do: _reset_async!(socket, key, ok: result)
+
+        def reset_async!(%Socket{} = socket, key, failed: reason),
+          do: _reset_async!(socket, key, failed: reason)
+
+        def reset_async!(%Socket{} = socket, key, loading: loading_state),
+          do: _reset_async!(socket, key, loading: loading_state)
+
+        defp _reset_async!(%Socket{} = socket, key, opt) do
           update_slice(socket, fn state ->
             Rephex.Slice.reset_async!(state, key, opt)
           end)
@@ -142,7 +156,21 @@ defmodule Rephex.Slice do
         |> Support.update_async!(:video, loading: true})  # no progress
         ```
         """
-        def update_async!(%Socket{} = socket, key, opt) do
+        @spec update_async!(
+                Socket.t(),
+                atom(),
+                [ok: any()] | [failed: any()] | [loading: any()]
+              ) :: Socket.t()
+        def update_async!(%Socket{} = socket, key, ok: result),
+          do: _update_async!(socket, key, ok: result)
+
+        def update_async!(%Socket{} = socket, key, failed: reason),
+          do: _update_async!(socket, key, failed: reason)
+
+        def update_async!(%Socket{} = socket, key, loading: loading_state),
+          do: _update_async!(socket, key, loading: loading_state)
+
+        defp _update_async!(%Socket{} = socket, key, opt) do
           update_slice(socket, fn state ->
             Rephex.Slice.update_async!(state, key, opt)
           end)
