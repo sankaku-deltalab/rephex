@@ -125,6 +125,24 @@ defmodule Rephex.Slice do
         end
 
         @doc """
+        Get Rephex slice element by `get_in/2`.
+
+        ## Example
+
+        ```ex
+        def get_count(%Socket{} = socket) do
+          get_slice_in(socket, [:count])
+        end
+        ```
+        """
+        @spec get_slice_in(Socket.t(), [any()]) :: any()
+        def get_slice_in(%Socket{} = socket, keys) do
+          socket
+          |> get_slice()
+          |> get_in(keys)
+        end
+
+        @doc """
         Reset AsyncResult in state.
 
         ## Example

@@ -13,6 +13,16 @@ defmodule RephexTest do
     assert slice.count == 1
   end
 
+  test "get element in socket" do
+    socket = Fixture.new_socket_with_slices() |> CounterSlice.add_count(%{amount: 1})
+
+    count_1 = CounterSlice.Support.get_slice(socket).count
+    count_2 = CounterSlice.Support.get_slice_in(socket, [:count])
+
+    assert count_1 == 1
+    assert count_2 == 1
+  end
+
   test "mlt count" do
     socket =
       Fixture.new_socket_with_slices()
