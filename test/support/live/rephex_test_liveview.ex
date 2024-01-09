@@ -29,10 +29,10 @@ defmodule RephexTest.Fixture.TestLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <div>Count: <%= @__rephex__.count %></div>
+    <div>Count: <%= @_rpx_.count %></div>
 
     <button phx-click="add_count_1">[Add 1]</button>
-    <.async_result assign={@__rephex__.add_twice_async}>
+    <.async_result assign={@_rpx_.add_twice_async}>
       <:loading :let={%{progress: {current, max}}}>
         <button phx-click="cancel_add_count_async_2">[Cancel]</button>
         <%= "#{current} / #{max}" %>

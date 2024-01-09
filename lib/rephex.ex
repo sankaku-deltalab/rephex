@@ -1,4 +1,4 @@
 defmodule Rephex do
-  @spec root() :: :__rephex__
-  def root(), do: :__rephex__
+  @spec root() :: :_rpx_
+  def root(), do: :_rpx_
 end
