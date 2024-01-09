@@ -8,6 +8,6 @@ defmodule RephexTest.Fixture do
   end
 
   def new_socket_with_slices() do
-    RephexTest.Fixture.State.init(%Socket{})
+    RephexTest.Fixture.CounterState.init(%Socket{})
   end
 end

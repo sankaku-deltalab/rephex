@@ -9,25 +9,20 @@ defmodule Rephex.AsyncAction do
   @callback before_cancel(socket :: Socket.t(), reason :: any()) ::
               {:continue, Socket.t()} | {:abort, Socket.t()}
 
-  defmacro __using__([slice: slice_module] = _opt) do
+  defmacro __using__(_opt \\ []) do
     quote do
       @behaviour Rephex.AsyncAction
-      @__slice_module unquote(slice_module)
 
-      # NOTE: `@type payload` must be defined.
+      # NOTE: `@type payload`, `@type cancel_reason` must be defined.
 
       @spec start(Socket.t(), payload()) :: any()
       def start(socket, payload) do
-        Rephex.AsyncAction.start_async_action(socket, payload,
-          slice_module: @__slice_module,
-          async_module: __MODULE__
-        )
+        Rephex.AsyncAction.start_async_action(socket, payload, async_module: __MODULE__)
       end
 
-      @spec cancel(Socket.t(), any()) :: Socket.t()
+      @spec cancel(Socket.t(), cancel_reason()) :: Socket.t()
       def cancel(%Socket{} = socket, reason \\ {:shutdown, :cancel}) do
         Rephex.AsyncAction.cancel_async_action(socket,
-          slice_module: @__slice_module,
           async_module: __MODULE__,
           reason: reason
         )
@@ -35,18 +30,18 @@ defmodule Rephex.AsyncAction do
     end
   end
 
-  def start_async_action(socket, payload, slice_module: slice_module, async_module: async_module)
-      when is_atom(slice_module) do
-    if Rephex.State.Support.propagated?(socket),
-      do: raise("Must start async on propagated state.")
+  def start_async_action(%Socket{parent_pid: parent_pid}, _payload, _opt) when parent_pid != nil,
+    do: raise("Use this function only in LiveView (root).")
 
+  def start_async_action(%Socket{} = socket, payload, async_module: async_module)
+      when is_atom(async_module) do
     case async_module.before_async(socket, payload) do
       {:continue, %Socket{} = socket} ->
-        slice_state = Rephex.State.Support.get_slice!(socket, slice_module)
+        state = Rephex.State.Assigns.get_state(socket)
         lv_pid = self()
         send_msg = fn msg -> send(lv_pid, {Rephex.AsyncAction, async_module, msg}) end
         fun_raw = &async_module.start_async/3
-        fun_for_async = fn -> fun_raw.(slice_state, payload, send_msg) end
+        fun_for_async = fn -> fun_raw.(state, payload, send_msg) end
 
         Phoenix.LiveView.start_async(socket, async_module, fun_for_async)
 
@@ -55,15 +50,15 @@ defmodule Rephex.AsyncAction do
     end
   end
 
-  def cancel_async_action(%Socket{} = socket,
-        slice_module: slice_module,
+  def cancel_async_action(%Socket{parent_pid: parent_pid}, _opt) when parent_pid != nil,
+    do: raise("Use this function only in LiveView (root).")
+
+  def cancel_async_action(
+        %Socket{} = socket,
         async_module: async_module,
         reason: reason
       )
-      when is_atom(slice_module) and is_atom(async_module) do
-    if Rephex.State.Support.propagated?(socket),
-      do: raise("Must cancel async on propagated state.")
-
+      when is_atom(async_module) do
     case async_module.before_cancel(socket, reason) do
       {:continue, %Socket{} = socket} ->
         Phoenix.LiveView.cancel_async(socket, async_module, reason)
@@ -71,5 +66,44 @@ defmodule Rephex.AsyncAction do
       {:abort, %Socket{} = socket} ->
         socket
     end
+  end
+end
+
+defmodule Rephex.AsyncAction.Handler do
+  alias Phoenix.LiveView.Socket
+
+  defmacro __using__(opt) do
+    async_modules = Keyword.fetch!(opt, :async_modules)
+
+    quote do
+      @impl true
+      def handle_info({Rephex.AsyncAction, async_module, _message} = msg, %Socket{} = socket)
+          when is_atom(async_module) and async_module in unquote(async_modules) do
+        Rephex.AsyncAction.Handler.handle_info_by_async_message(msg, socket)
+      end
+
+      @impl true
+      def handle_async(name, async_fun_result, %Socket{} = socket)
+          when name in unquote(async_modules) do
+        Rephex.AsyncAction.Handler.handle_async_action(name, async_fun_result, socket)
+      end
+    end
+  end
+
+  def handle_info_by_async_message(
+        {Rephex.AsyncAction, async_module, message} = _msg,
+        %Socket{} = socket
+      )
+      when is_atom(async_module) do
+    # NOTE: Caller must check `async_module` in async modules.
+    if socket.parent_pid != nil,
+      do: raise("Must not receive message in async on propagated state.")
+
+    {:noreply, async_module.receive_message(socket, message)}
+  end
+
+  def handle_async_action(async_module, async_fun_result, %Socket{} = socket) do
+    # NOTE: Caller must check `async_module` in async modules.
+    {:noreply, async_module.resolve(socket, async_fun_result)}
   end
 end
