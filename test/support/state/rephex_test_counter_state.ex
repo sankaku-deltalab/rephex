@@ -90,42 +90,17 @@ defmodule RephexTest.Fixture.CounterState.AddCountAsync do
   end
 end
 
-# defmodule RephexTest.Fixture.CounterState.SomethingAsyncSingle do
-#   @type payload :: %{}
-#   @type result :: String.t()
-#   @type cancel_reason :: any()
+defmodule RephexTest.Fixture.CounterState.SomethingAsyncSimple do
+  use Rephex.AsyncAction.Simple, async_keys: [:something_async]
+  # import Rephex.State.Assigns
 
-#   @key :something_async
+  @impl true
+  def start_async(_state, %{} = _payload, progress) do
+    for i <- 0..4 do
+      progress.({i, 5})
+      :timer.sleep(200)
+    end
 
-#   use Rephex.AsyncActionSingle, key: @key
-
-#   alias Phoenix.LiveView.{AsyncResult, Socket}
-#   import Rephex.State.Assigns
-
-#   @impl true
-#   def before_async(%Socket{} = socket, _payload), do: {:continue, socket}
-
-#   @impl true
-#   def start_async(
-#         %{@key => %AsyncResult{} = async} = state,
-#         %{} = _payload,
-#         update_async
-#       ) do
-#     if async.loading != nil, do: raise({:shutdown, :already_loading})
-
-#     for i <- 0..4 do
-#       update_async.({i, 5})
-#       :timer.sleep(200)
-#     end
-
-#     "ok ok ok"
-#   end
-
-#   @impl true
-#   def resolve_exit(%Socket{} = socket, reason) do
-#     Assigns.upd_in(socket, [@key], &AsyncResult.failed(&1, reason))
-#   end
-
-#   @impl true
-#   def before_cancel(%Socket{} = socket, _reason), do: {:continue, socket}
-# end
+    "ok ok ok"
+  end
+end
