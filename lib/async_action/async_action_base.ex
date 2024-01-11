@@ -21,7 +21,7 @@ defmodule Rephex.AsyncAction.Handler do
 
     quote do
       @impl true
-      def handle_info({Rephex.AsyncAction.Base, async_module, _message} = msg, %Socket{} = socket)
+      def handle_info({Rephex.AsyncAction, async_module, _message} = msg, %Socket{} = socket)
           when is_atom(async_module) and async_module in unquote(async_modules) do
         Rephex.AsyncAction.Handler.handle_info_by_async_message(msg, socket)
       end
@@ -35,7 +35,7 @@ defmodule Rephex.AsyncAction.Handler do
   end
 
   def handle_info_by_async_message(
-        {Rephex.AsyncAction.Base, async_module, message} = _msg,
+        {Rephex.AsyncAction, async_module, message} = _msg,
         %Socket{} = socket
       )
       when is_atom(async_module) do
