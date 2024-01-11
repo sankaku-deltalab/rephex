@@ -27,6 +27,13 @@ defmodule Rephex.AsyncAction.Handler do
       end
 
       @impl true
+      def handle_info({Rephex.AsyncAction, async_module, _message} = msg, %Socket{} = socket) do
+        raise(
+          "Unknown async module: #{inspect(async_module)}. async_modules: #{inspect(unquote(async_modules))}"
+        )
+      end
+
+      @impl true
       def handle_async(name, async_fun_result, %Socket{} = socket)
           when name in unquote(async_modules) do
         Rephex.AsyncAction.Handler.handle_async_action(name, async_fun_result, socket)
