@@ -1,4 +1,6 @@
 defmodule Rephex do
-  @spec root() :: :_rpx_
-  def root(), do: :_rpx_
+  @root Application.compile_env(:rephex, :root, :rpx)
+
+  @spec root() :: atom()
+  def root(), do: @root
 end

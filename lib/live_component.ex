@@ -12,7 +12,7 @@ defmodule Rephex.LiveComponent do
   Example:
 
   ```ex
-  def update(%{_rpx_: _} = assigns, socket) do
+  def update(%{rpx: _} = assigns, socket) do
     {:ok,
      socket
      |> propagate_rephex(assigns)
