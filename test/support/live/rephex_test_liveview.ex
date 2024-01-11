@@ -1,7 +1,7 @@
 defmodule RephexTest.Fixture.TestLive.Index do
   use Phoenix.LiveView
   use Rephex.LiveView, state: RephexTest.Fixture.CounterState
-  # import Rephex.Component
+  # import Rephex.LiveComponent
 
   alias Phoenix.LiveView.Socket
   alias RephexTest.Fixture.CounterState

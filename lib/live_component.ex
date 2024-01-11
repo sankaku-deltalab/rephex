@@ -1,4 +1,4 @@
-defmodule Rephex.Component do
+defmodule Rephex.LiveComponent do
   use Phoenix.Component
 
   @root Rephex.root()
@@ -45,14 +45,14 @@ defmodule Rephex.Component do
   end
 end
 
-defmodule Rephex.Component.Handler do
+defmodule Rephex.LiveComponent.Handler do
   alias Phoenix.LiveView.Socket
 
   defmacro __using__(_opt \\ []) do
     quote do
       @impl true
       def handle_info({{Rephex.LiveComponent, :call_in_root}, _fun} = msg, %Socket{} = socket) do
-        Rephex.Component.Handler.handle_info_by_call_in_root(msg, socket)
+        Rephex.LiveComponent.Handler.handle_info_by_call_in_root(msg, socket)
       end
     end
   end
