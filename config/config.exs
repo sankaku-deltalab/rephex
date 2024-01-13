@@ -1,4 +1,4 @@
 import Config
 
-config :rephex,
-  root: :rpx
+# config :rephex,
+#   root: :root_key
