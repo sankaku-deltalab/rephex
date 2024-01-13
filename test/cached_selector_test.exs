@@ -2,24 +2,19 @@ defmodule RephexTest.CachedSelectorTest do
   use ExUnit.Case
 
   alias RephexTest.Fixture
+  alias RephexTest.Fixture.{SelectorABSum, SelectorBCSum}
   alias Rephex.CachedSelector
 
   test "new" do
-    _ab_sum =
-      CachedSelector.new(
-        fn socket -> [socket.assigns.a, socket.assigns.b] end,
-        fn [a, b] -> a + b end
-      )
+    ab_sum = CachedSelector.new(SelectorABSum)
 
-    # no exception
+    assert ab_sum.result == nil
+    assert ab_sum.prev_args == {}
+    assert ab_sum.selector_module == SelectorABSum
   end
 
   test "update" do
-    ab_sum =
-      CachedSelector.new(
-        fn socket -> [socket.assigns.a, socket.assigns.b] end,
-        fn [a, b] -> a + b end
-      )
+    ab_sum = CachedSelector.new(SelectorABSum)
 
     socket =
       Fixture.new_socket_raw()
@@ -27,21 +22,13 @@ defmodule RephexTest.CachedSelectorTest do
 
     ab_sum = CachedSelector.update(ab_sum, socket)
     assert ab_sum.result == 1 + 2
-    assert ab_sum.prev_args == [1, 2]
+    assert ab_sum.prev_args == {1, 2}
   end
 
   test "update_selectors_in_socket update selectors not nested" do
     initial_state = %{
-      ab_sum:
-        CachedSelector.new(
-          fn socket -> [socket.assigns.a, socket.assigns.b] end,
-          fn [a, b] -> a + b end
-        ),
-      bc_sum:
-        CachedSelector.new(
-          fn socket -> [socket.assigns.b, socket.assigns.c] end,
-          fn [b, c] -> b + c end
-        )
+      ab_sum: CachedSelector.new(SelectorABSum),
+      bc_sum: CachedSelector.new(SelectorBCSum)
     }
 
     socket =
@@ -59,16 +46,8 @@ defmodule RephexTest.CachedSelectorTest do
   test "do not update selectors nested" do
     initial_state = %{
       nest: %{
-        ab_sum:
-          CachedSelector.new(
-            fn socket -> [socket.assigns.a, socket.assigns.b] end,
-            fn [a, b] -> a + b end
-          ),
-        bc_sum:
-          CachedSelector.new(
-            fn socket -> [socket.assigns.b, socket.assigns.c] end,
-            fn [b, c] -> b + c end
-          )
+        ab_sum: CachedSelector.new(SelectorABSum),
+        bc_sum: CachedSelector.new(SelectorBCSum)
       }
     }
 
