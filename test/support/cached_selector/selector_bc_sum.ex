@@ -1,5 +1,5 @@
 defmodule RephexTest.Fixture.SelectorBCSum do
-  @behaviour Rephex.CachedSelector.Base
+  @behaviour Rephex.Selector.CachedSelector.Base
 
   @impl true
   def args(socket) do

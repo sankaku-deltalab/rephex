@@ -1,4 +1,4 @@
-defmodule Rephex.CachedSelector.Base do
+defmodule Rephex.Selector.CachedSelector.Base do
   alias Phoenix.LiveView.Socket
 
   @type args :: any()
@@ -8,13 +8,13 @@ defmodule Rephex.CachedSelector.Base do
   @callback resolve(args :: args()) :: result()
 end
 
-defmodule Rephex.CachedSelector do
+defmodule Rephex.Selector.CachedSelector do
   @moduledoc """
   Contain a function and its arguments. The function is called only when the arguments change.
 
   ```ex
   defmodule CachedSelectorImpl do
-    @behaviour Rephex.CachedSelector.Base
+    @behaviour Rephex.Selector.CachedSelector.Base
 
     @impl true
     def args(socket) do
@@ -30,7 +30,7 @@ defmodule Rephex.CachedSelector do
   defmodule AnyLiveComponent do
     ...
 
-    alias Rephex.CachedSelector
+    alias Rephex.Selector.CachedSelector
 
     @initial_state %{
       ab_sum_selector: CachedSelector.new(CachedSelectorImpl)

@@ -3,7 +3,7 @@ defmodule RephexTest.CachedSelectorTest do
 
   alias RephexTest.Fixture
   alias RephexTest.Fixture.{SelectorABSum, SelectorBCSum}
-  alias Rephex.CachedSelector
+  alias Rephex.Selector.CachedSelector
 
   test "new" do
     ab_sum = CachedSelector.new(SelectorABSum)
