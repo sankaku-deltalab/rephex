@@ -5,6 +5,13 @@ defmodule Rephex.LiveComponent do
 
   alias Phoenix.LiveView.Socket
 
+  defmacro __using__(_opt \\ []) do
+    quote do
+      use Rephex.LiveComponent.Handler
+      use Rephex.Selector.AsyncSelector.Handler
+    end
+  end
+
   @doc """
   Assign rephex state to socket assigns in LiveComponent.
   WARN: Do NOT use this function in LiveView (root).
