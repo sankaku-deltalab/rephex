@@ -14,8 +14,16 @@ defmodule Rephex.Selector.AsyncSelector.Handler do
   def __using__(_opts) do
     quote do
       @impl true
-      def handle_async({Rephex.Selector.AsyncSelector.Handler, selector}, result, socket) do
-        Rephex.Selector.AsyncSelector.Handler.handle_async_select_result(socket, selector, result)
+      def handle_async(
+            {Rephex.Selector.AsyncSelector.Handler, _selector_keys} = name,
+            result,
+            socket
+          ) do
+        Rephex.Selector.AsyncSelector.Handler.handle_async_select_result(
+          name,
+          result,
+          socket
+        )
       end
     end
   end
@@ -25,12 +33,12 @@ defmodule Rephex.Selector.AsyncSelector.Handler do
     Phoenix.LiveView.start_async(socket, {__MODULE__, selector_keys}, func)
   end
 
-  def handle_async_by_selector(
-        %Socket{} = socket,
-        {__MODULE__, selector_keys},
-        result
+  def handle_async_select_result(
+        {__MODULE__, selector_keys} = _name,
+        result,
+        %Socket{} = socket
       ) do
-    Rephex.Selector.AsyncSelector.resolve_in_socket(socket, selector_keys, result)
+    {:noreply, Rephex.Selector.AsyncSelector.resolve_in_socket(socket, selector_keys, result)}
   end
 end
 
