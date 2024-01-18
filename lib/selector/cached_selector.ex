@@ -34,6 +34,7 @@ defmodule Rephex.Selector.CachedSelector do
 
     @initial_state %{
       ab_sum_selector: CachedSelector.new(CachedSelectorImpl)
+      # ab_sum_selector: CachedSelector.new(CachedSelectorImpl, init: 0)  # initial value is optional
     }
 
     @impl true
@@ -74,8 +75,10 @@ defmodule Rephex.Selector.CachedSelector do
         }
 
   @spec new(module()) :: t(any(), any())
-  def new(selector) do
-    %__MODULE__{selector_module: selector}
+  @spec new(module(), [{:init, result}]) :: t(any(), result) when result: any()
+  def new(selector, opt \\ []) do
+    init = Keyword.get(opt, :init, nil)
+    %__MODULE__{selector_module: selector, result: init}
   end
 
   @spec update(t(args, result), Socket.t()) :: t(args, result) when args: any(), result: any()

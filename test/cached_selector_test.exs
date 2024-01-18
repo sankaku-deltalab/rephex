@@ -5,12 +5,20 @@ defmodule RephexTest.CachedSelectorTest do
   alias RephexTest.Fixture.{SelectorABSum, SelectorBCSum}
   alias Rephex.Selector.CachedSelector
 
-  test "new" do
-    ab_sum = CachedSelector.new(SelectorABSum)
+  describe "new" do
+    test "to create CachedSelector" do
+      ab_sum = CachedSelector.new(SelectorABSum)
 
-    assert ab_sum.result == nil
-    assert ab_sum.prev_args == {}
-    assert ab_sum.selector_module == SelectorABSum
+      assert ab_sum.result == nil
+      assert ab_sum.prev_args == {}
+      assert ab_sum.selector_module == SelectorABSum
+    end
+
+    test "server init option" do
+      ab_sum = CachedSelector.new(SelectorABSum, init: 999)
+
+      assert ab_sum.result == 999
+    end
   end
 
   test "update" do
