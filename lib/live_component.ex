@@ -9,6 +9,7 @@ defmodule Rephex.LiveComponent do
     quote do
       use Rephex.LiveComponent.Handler
       use Rephex.Selector.AsyncSelector.Handler
+      import Rephex.LiveComponent
     end
   end
 
