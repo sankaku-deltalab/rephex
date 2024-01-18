@@ -1,6 +1,7 @@
 defmodule Rephex.AsyncAction.Simple do
   alias Phoenix.LiveView.{Socket, AsyncResult}
   import Rephex.State.Assigns
+  alias Rephex.AsyncAction.Handler
 
   @type loading_status() :: any()
   @type result() :: any()
@@ -70,11 +71,11 @@ defmodule Rephex.AsyncAction.Simple do
       %AsyncResult{loading: nil} ->
         state = Rephex.State.Assigns.get_state(socket)
         lv_pid = self()
-        upd_progress = fn msg -> send(lv_pid, {Rephex.AsyncAction, async_simple_module, msg}) end
+        upd_progress = &Handler.send_message_from_action(lv_pid, async_simple_module, &1)
         fun_raw = &async_simple_module.start_async/3
         fun_for_async = fn -> fun_raw.(state, payload, upd_progress) end
 
-        Phoenix.LiveView.start_async(socket, async_simple_module, fun_for_async)
+        Handler.start_async_by_action(socket, async_simple_module, fun_for_async)
 
       _ ->
         socket

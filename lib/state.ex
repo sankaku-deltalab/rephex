@@ -9,16 +9,12 @@ defmodule Rephex.State do
   end
 
   defmacro __using__(opt) do
-    async_modules = Keyword.fetch!(opt, :async_modules)
     initial_state = Keyword.fetch!(opt, :initial_state)
 
     quote do
       def init(%Socket{} = socket) do
         socket |> Rephex.State.init(unquote(initial_state))
       end
-
-      def async_modules(),
-        do: unquote(async_modules)
     end
   end
 end

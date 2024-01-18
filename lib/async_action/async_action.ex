@@ -1,5 +1,6 @@
 defmodule Rephex.AsyncAction do
   alias Phoenix.LiveView.Socket
+  alias Rephex.AsyncAction.Handler
 
   @callback before_async(socket :: Socket.t(), payload :: map()) ::
               {:continue, Socket.t()} | {:abort, Socket.t()}
@@ -38,11 +39,11 @@ defmodule Rephex.AsyncAction do
       {:continue, %Socket{} = socket} ->
         state = Rephex.State.Assigns.get_state(socket)
         lv_pid = self()
-        send_msg = fn msg -> send(lv_pid, {Rephex.AsyncAction, async_module, msg}) end
+        send_msg = &Handler.send_message_from_action(lv_pid, async_module, &1)
         fun_raw = &async_module.start_async/3
         fun_for_async = fn -> fun_raw.(state, payload, send_msg) end
 
-        Phoenix.LiveView.start_async(socket, async_module, fun_for_async)
+        Handler.start_async_by_action(socket, async_module, fun_for_async)
 
       {:abort, %Socket{} = socket} ->
         socket

@@ -2,7 +2,6 @@ defmodule RephexTest.Fixture.CounterState do
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.Socket
 
-  alias RephexTest.Fixture.CounterState.{AddCountAsync, SomethingAsyncSingle}
   import Rephex.State.Assigns
 
   @type t :: %{
@@ -18,7 +17,6 @@ defmodule RephexTest.Fixture.CounterState do
   }
 
   use Rephex.State,
-    async_modules: [AddCountAsync, SomethingAsyncSingle],
     initial_state: @initial_state
 
   # Action
