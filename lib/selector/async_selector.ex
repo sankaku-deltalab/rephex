@@ -11,7 +11,7 @@ end
 defmodule Rephex.Selector.AsyncSelector.Handler do
   alias Phoenix.LiveView.Socket
 
-  def __using__(_opts) do
+  defmacro __using__(_opt \\ []) do
     quote do
       @impl true
       def handle_async(
