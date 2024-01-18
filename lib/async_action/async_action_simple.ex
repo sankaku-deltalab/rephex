@@ -98,7 +98,7 @@ defmodule Rephex.AsyncAction.Simple do
         async_keys,
         &AsyncResult.failed(&1, reason)
       )
-      |> Phoenix.LiveView.cancel_async(async_simple_module, reason)
+      |> Handler.cancel_async_by_action(async_simple_module, reason)
     else
       _ ->
         socket

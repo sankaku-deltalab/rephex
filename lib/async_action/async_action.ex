@@ -61,7 +61,7 @@ defmodule Rephex.AsyncAction do
       when is_atom(async_module) do
     case async_module.before_cancel(socket, reason) do
       {:continue, %Socket{} = socket} ->
-        Phoenix.LiveView.cancel_async(socket, async_module, reason)
+        Handler.cancel_async_by_action(socket, async_module, reason)
 
       {:abort, %Socket{} = socket} ->
         socket

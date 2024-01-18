@@ -49,6 +49,15 @@ defmodule Rephex.AsyncAction.Handler do
     )
   end
 
+  def cancel_async_by_action(%Socket{} = socket, async_module, reason)
+      when is_atom(async_module) do
+    Phoenix.LiveView.cancel_async(
+      socket,
+      {Rephex.AsyncAction.Handler, :result, async_module},
+      reason
+    )
+  end
+
   def send_message_from_action(lv_pid, async_module, message)
       when is_atom(async_module) and is_pid(lv_pid) do
     send(lv_pid, {Rephex.AsyncAction.Handler, :message, async_module, message})
