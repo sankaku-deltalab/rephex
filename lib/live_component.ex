@@ -1,5 +1,5 @@
 defmodule Rephex.LiveComponent do
-  use Phoenix.Component
+  import Phoenix.Component
 
   @root Rephex.root()
 
