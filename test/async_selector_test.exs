@@ -7,7 +7,7 @@ defmodule RephexTest.AsyncSelectorTest do
   alias Rephex.Selector.AsyncSelector
 
   test "new" do
-    ab_sum = AsyncSelector.new(AsyncSelectorABSum, default_result: 999)
+    ab_sum = AsyncSelector.new(AsyncSelectorABSum, init: 999)
 
     assert ab_sum.async == AsyncResult.ok(999)
     assert ab_sum.prev_args == {AsyncSelector, :__undefined__}
@@ -15,7 +15,7 @@ defmodule RephexTest.AsyncSelectorTest do
   end
 
   test "update_in_socket" do
-    ab_sum = AsyncSelector.new(AsyncSelectorABSum, default_result: 999)
+    ab_sum = AsyncSelector.new(AsyncSelectorABSum, init: 999)
 
     socket =
       Fixture.new_socket_raw()
@@ -30,7 +30,7 @@ defmodule RephexTest.AsyncSelectorTest do
   end
 
   test "resolve_in_socket - ok" do
-    ab_sum = AsyncSelector.new(AsyncSelectorABSum, default_result: 999)
+    ab_sum = AsyncSelector.new(AsyncSelectorABSum, init: 999)
 
     socket =
       Fixture.new_socket_raw()

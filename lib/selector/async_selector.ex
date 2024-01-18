@@ -62,7 +62,7 @@ defmodule Rephex.Selector.AsyncSelector do
     use Rephex.LiveComponent  # Use this in LiveComponent
 
     @initial_state %{
-      ab_sum_selector: AsyncSelector.new(AsyncSelectorImpl)
+      ab_sum_selector: AsyncSelector.new(AsyncSelectorImpl, init: 0)
     }
 
     @impl true
@@ -106,9 +106,11 @@ defmodule Rephex.Selector.AsyncSelector do
           selector_module: module()
         }
 
-  @spec new(module(), default_result: result) :: t(any(), result) when result: any()
-  def new(selector, default_result: default_result) do
-    %__MODULE__{selector_module: selector, async: AsyncResult.ok(default_result)}
+  @spec new(module()) :: t(any(), any())
+  @spec new(module(), [{:init, result}]) :: t(any(), result) when result: any()
+  def new(selector, opt \\ []) do
+    init = Keyword.get(opt, :init, nil)
+    %__MODULE__{selector_module: selector, async: AsyncResult.ok(init)}
   end
 
   @spec update_in_socket(Socket.t(), [any()]) :: Socket.t()
