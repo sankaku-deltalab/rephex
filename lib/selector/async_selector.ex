@@ -13,6 +13,8 @@ defmodule Rephex.Selector.AsyncSelector.Handler do
 
   defmacro __using__(_opt \\ []) do
     quote do
+      @dialyzer {:nowarn_function, handle_async: 3}
+
       @impl true
       def handle_async(
             {Rephex.Selector.AsyncSelector.Handler, _selector_keys} = name,
