@@ -7,7 +7,7 @@ defmodule Rephex.LiveComponent do
 
   defmacro __using__(_opt \\ []) do
     quote do
-      use Rephex.LiveComponent.Handler
+      # Do not use Rephex.LiveComponent.Handler
       use Rephex.Selector.AsyncSelector.Handler
       import Rephex.LiveComponent
     end
