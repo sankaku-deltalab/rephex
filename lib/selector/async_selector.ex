@@ -170,7 +170,7 @@ defmodule Rephex.Selector.AsyncSelector do
           %__MODULE__{selector | async: AsyncResult.ok(async, result)}
         end)
 
-      {:error, reason} ->
+      {:exit, reason} ->
         socket
         |> socket_update_in(selector_keys, fn %__MODULE__{async: async} = selector ->
           %__MODULE__{selector | async: AsyncResult.failed(async, reason)}
