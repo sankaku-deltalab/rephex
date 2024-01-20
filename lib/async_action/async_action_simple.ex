@@ -14,6 +14,14 @@ defmodule Rephex.AsyncAction.Simple do
               progress :: loading_updater()
             ) :: result()
 
+  @doc """
+  If there is a possibility that the exit reason returns a value
+  that cannot be included in socket.assigns, you need to transform the exit reason.
+  """
+  @callback convert_exit_reason(reason :: any()) :: any()
+
+  @optional_callbacks convert_exit_reason: 1
+
   defmacro __using__([async_keys: async_keys] = _opt) do
     quote do
       @behaviour Rephex.AsyncAction.Base
@@ -50,6 +58,7 @@ defmodule Rephex.AsyncAction.Simple do
       def resolve(%Socket{} = socket, result) do
         Rephex.AsyncAction.Simple.resolve(
           socket,
+          __MODULE__,
           result,
           unquote(async_keys)
         )
@@ -105,7 +114,8 @@ defmodule Rephex.AsyncAction.Simple do
     end
   end
 
-  def resolve(%Socket{} = socket, result, async_keys) do
+  def resolve(%Socket{} = socket, async_simple_module, result, async_keys)
+      when is_atom(async_simple_module) do
     case result do
       {:ok, success_result} ->
         socket
@@ -115,6 +125,9 @@ defmodule Rephex.AsyncAction.Simple do
         )
 
       {:exit, reason} ->
+        mfa = {async_simple_module, :convert_exit_reason, 1}
+        reason = Rephex.Util.call_optional(mfa, [reason], reason)
+
         socket
         |> update_state_in(
           async_keys,
