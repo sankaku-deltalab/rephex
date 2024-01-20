@@ -11,6 +11,8 @@ defmodule Rephex.AsyncAction.Base do
             ) :: Socket.t()
 
   @callback receive_message(socket :: Socket.t(), message :: message()) :: Socket.t()
+
+  @optional_callbacks receive_message: 2
 end
 
 defmodule Rephex.AsyncAction.Handler do
@@ -71,7 +73,8 @@ defmodule Rephex.AsyncAction.Handler do
     if socket.parent_pid != nil,
       do: raise("Must not receive message in async on propagated state.")
 
-    {:noreply, async_module.receive_message(socket, message)}
+    mfa = {async_module, :receive_message, 2}
+    {:noreply, Rephex.Util.call_optional(mfa, [socket, message], socket)}
   end
 
   def handle_async_action(

@@ -8,6 +8,8 @@ defmodule Rephex.AsyncAction do
   @callback before_cancel(socket :: Socket.t(), reason :: any()) ::
               {:continue, Socket.t()} | {:abort, Socket.t()}
 
+  @optional_callbacks before_async: 2, before_cancel: 2
+
   defmacro __using__(_opt \\ []) do
     quote do
       @behaviour Rephex.AsyncAction.Base
@@ -35,7 +37,9 @@ defmodule Rephex.AsyncAction do
 
   def start_async_action(%Socket{} = socket, payload, async_module: async_module)
       when is_atom(async_module) do
-    case async_module.before_async(socket, payload) do
+    mfa = {async_module, :before_async, 2}
+
+    case Rephex.Util.call_optional(mfa, [socket, payload], {:continue, socket}) do
       {:continue, %Socket{} = socket} ->
         state = Rephex.State.Assigns.get_state(socket)
         lv_pid = self()
@@ -59,7 +63,9 @@ defmodule Rephex.AsyncAction do
         reason: reason
       )
       when is_atom(async_module) do
-    case async_module.before_cancel(socket, reason) do
+    mfa = {async_module, :before_cancel, 2}
+
+    case Rephex.Util.call_optional(mfa, [socket, reason], {:continue, socket}) do
       {:continue, %Socket{} = socket} ->
         Handler.cancel_async_by_action(socket, async_module, reason)
 
