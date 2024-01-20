@@ -6,6 +6,14 @@ defmodule Rephex.Selector.AsyncSelector.Base do
 
   @callback args(socket :: Socket.t()) :: args()
   @callback resolve(args :: args()) :: result()
+
+  @doc """
+  If there is a possibility that the exit reason returns a value
+  that cannot be included in socket.assigns, you need to transform the exit reason.
+  """
+  @callback convert_exit_reason(reason :: any()) :: any()
+
+  @optional_callbacks convert_exit_reason: 1
 end
 
 defmodule Rephex.Selector.AsyncSelector.Handler do
@@ -172,9 +180,15 @@ defmodule Rephex.Selector.AsyncSelector do
 
       {:exit, reason} ->
         socket
-        |> socket_update_in(selector_keys, fn %__MODULE__{async: async} = selector ->
-          %__MODULE__{selector | async: AsyncResult.failed(async, reason)}
-        end)
+        |> socket_update_in(
+          selector_keys,
+          fn %__MODULE__{async: async, selector_module: module} =
+               selector ->
+            mfa = {module, :convert_exit_reason, 1}
+            reason = Rephex.Util.call_optional(mfa, [reason], reason)
+            %__MODULE__{selector | async: AsyncResult.failed(async, reason)}
+          end
+        )
     end
     # Run next async if args changed
     |> update_in_socket(selector_keys)
