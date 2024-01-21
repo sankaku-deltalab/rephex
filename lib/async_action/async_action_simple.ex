@@ -3,15 +3,15 @@ defmodule Rephex.AsyncAction.Simple do
   import Rephex.State.Assigns
   alias Rephex.AsyncAction.Handler
 
-  @type loading_status() :: any()
+  @type loading_state() :: any()
   @type result() :: any()
   @type exit_reason() :: any()
-  @type loading_updater() :: (loading_status() -> nil)
+  @type loading_updater() :: (loading_state() -> nil)
 
   @callback initial_loading_state(
               state :: map(),
               payload :: map()
-            ) :: loading_status()
+            ) :: loading_state()
 
   @callback start_async(
               state :: map(),
