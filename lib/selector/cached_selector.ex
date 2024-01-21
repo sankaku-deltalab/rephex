@@ -124,3 +124,11 @@ defmodule Rephex.Selector.CachedSelector do
     end)
   end
 end
+
+defimpl Rephex.Selectable, for: Rephex.Selector.CachedSelector do
+  def update_in_socket(selector, socket, selectable_keys) do
+    Rephex.Util.socket_update_in(socket, selectable_keys, fn _ ->
+      Rephex.Selector.CachedSelector.update(selector, socket)
+    end)
+  end
+end

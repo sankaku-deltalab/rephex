@@ -224,3 +224,9 @@ defmodule Rephex.Selector.AsyncSelector do
     end
   end
 end
+
+defimpl Rephex.Selectable, for: Rephex.Selector.AsyncSelector do
+  def update_in_socket(_selector, socket, selector_keys) do
+    Rephex.Selector.AsyncSelector.update_in_socket(socket, selector_keys)
+  end
+end
