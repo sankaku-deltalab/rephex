@@ -8,6 +8,11 @@ defmodule Rephex.AsyncAction.Simple do
   @type exit_reason() :: any()
   @type loading_updater() :: (loading_status() -> nil)
 
+  @callback initial_loading_state(
+              state :: map(),
+              payload :: map()
+            ) :: loading_status()
+
   @callback start_async(
               state :: map(),
               payload :: map(),
@@ -20,7 +25,7 @@ defmodule Rephex.AsyncAction.Simple do
   """
   @callback convert_exit_reason(reason :: any()) :: any()
 
-  @optional_callbacks convert_exit_reason: 1
+  @optional_callbacks initial_loading_state: 2, convert_exit_reason: 1
 
   defmacro __using__([async_keys: async_keys] = _opt) do
     quote do
@@ -84,7 +89,12 @@ defmodule Rephex.AsyncAction.Simple do
         fun_raw = &async_simple_module.start_async/3
         fun_for_async = fn -> fun_raw.(state, payload, upd_progress) end
 
-        Handler.start_async_by_action(socket, async_simple_module, fun_for_async)
+        mfa = {async_simple_module, :initial_loading_state, 2}
+        initial_loading_state = Rephex.Util.call_optional(mfa, [state, payload], true)
+
+        socket
+        |> update_state_in(async_keys, &AsyncResult.loading(&1, initial_loading_state))
+        |> Handler.start_async_by_action(async_simple_module, fun_for_async)
 
       _ ->
         socket
