@@ -37,7 +37,7 @@ defmodule RephexTest.Fixture.CounterState.AddCountAsync do
   @type message :: nil
   @type cancel_reason :: any()
 
-  use Rephex.AsyncAction
+  use Rephex.AsyncAction, payload_type: payload, cancel_reason_type: cancel_reason
 
   alias Phoenix.LiveView.{AsyncResult, Socket}
   import Rephex.State.Assigns
@@ -89,8 +89,10 @@ defmodule RephexTest.Fixture.CounterState.AddCountAsync do
 end
 
 defmodule RephexTest.Fixture.CounterState.SomethingAsyncSimple do
-  use Rephex.AsyncAction.Simple, async_keys: [:something_async]
-  # import Rephex.State.Assigns
+  use Rephex.AsyncAction.Simple,
+    async_keys: [:something_async],
+    payload_type: %{},
+    cancel_reason_type: any()
 
   @impl true
   def start_async(_state, %{} = _payload, progress) do

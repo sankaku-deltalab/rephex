@@ -10,19 +10,31 @@ defmodule Rephex.AsyncAction do
 
   @optional_callbacks before_async: 2, before_cancel: 2
 
-  defmacro __using__(_opt \\ []) do
+  defmacro __using__(opt \\ []) do
+    default_payload_type =
+      quote do
+        map()
+      end
+
+    default_cancel_reason_type =
+      quote do
+        any()
+      end
+
+    payload_type = Keyword.get(opt, :payload_type, default_payload_type)
+    cancel_reason_type = Keyword.get(opt, :cancel_reason_type, default_cancel_reason_type)
+
     quote do
       @behaviour Rephex.AsyncAction.Base
       @behaviour Rephex.AsyncAction
 
-      # NOTE: `@type payload`, `@type cancel_reason` must be defined.
-
-      @spec start(Socket.t(), payload()) :: any()
+      @spec start(Socket.t(), unquote(payload_type)) :: Socket.t()
       def start(socket, payload) do
         Rephex.AsyncAction.start_async_action(socket, payload, async_module: __MODULE__)
       end
 
-      @spec cancel(Socket.t(), cancel_reason()) :: Socket.t()
+      @spec cancel(Socket.t()) :: Socket.t()
+      @spec cancel(Socket.t(), unquote(cancel_reason_type)) :: Socket.t()
       def cancel(%Socket{} = socket, reason \\ {:shutdown, :cancel}) do
         Rephex.AsyncAction.cancel_async_action(socket,
           async_module: __MODULE__,

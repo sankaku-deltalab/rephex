@@ -27,12 +27,26 @@ defmodule Rephex.AsyncAction.Simple do
 
   @optional_callbacks initial_loading_state: 2, convert_exit_reason: 1
 
-  defmacro __using__([async_keys: async_keys] = _opt) do
+  defmacro __using__(opt) do
+    default_payload_type =
+      quote do
+        map()
+      end
+
+    default_cancel_reason_type =
+      quote do
+        any()
+      end
+
+    async_keys = Keyword.fetch!(opt, :async_keys)
+    payload_type = Keyword.get(opt, :payload_type, default_payload_type)
+    cancel_reason_type = Keyword.get(opt, :cancel_reason_type, default_cancel_reason_type)
+
     quote do
       @behaviour Rephex.AsyncAction.Base
       @behaviour Rephex.AsyncAction.Simple
 
-      @spec start(Socket.t(), map()) :: any()
+      @spec start(Socket.t(), unquote(payload_type)) :: any()
       def start(socket, payload) do
         Rephex.AsyncAction.Simple.start_async_action(
           socket,
@@ -42,7 +56,7 @@ defmodule Rephex.AsyncAction.Simple do
         )
       end
 
-      @spec cancel(Socket.t(), any()) :: Socket.t()
+      @spec cancel(Socket.t(), unquote(cancel_reason_type)) :: Socket.t()
       def cancel(%Socket{} = socket, reason \\ {:shutdown, :cancel}) do
         Rephex.AsyncAction.Simple.cancel_async_action(
           socket,
