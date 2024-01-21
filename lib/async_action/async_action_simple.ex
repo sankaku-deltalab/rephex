@@ -4,7 +4,7 @@ defmodule Rephex.AsyncAction.Simple do
   alias Rephex.AsyncAction.Handler
 
   @type loading_state() :: any()
-  @type result() :: any()
+  @type success_result() :: any()
   @type exit_reason() :: any()
   @type loading_updater() :: (loading_state() -> nil)
 
@@ -17,7 +17,12 @@ defmodule Rephex.AsyncAction.Simple do
               state :: map(),
               payload :: map(),
               progress :: loading_updater()
-            ) :: result()
+            ) :: success_result()
+
+  @callback after_async(
+              socket :: Socket.t(),
+              result :: {:ok, success_result()} | {:exit, exit_reason()}
+            ) :: Socket.t()
 
   @doc """
   If there is a possibility that the exit reason returns a value
@@ -25,7 +30,7 @@ defmodule Rephex.AsyncAction.Simple do
   """
   @callback convert_exit_reason(reason :: any()) :: any()
 
-  @optional_callbacks initial_loading_state: 2, convert_exit_reason: 1
+  @optional_callbacks initial_loading_state: 2, convert_exit_reason: 1, after_async: 2
 
   defmacro __using__(opt) do
     default_payload_type =
@@ -140,6 +145,8 @@ defmodule Rephex.AsyncAction.Simple do
 
   def resolve(%Socket{} = socket, async_simple_module, result, async_keys)
       when is_atom(async_simple_module) do
+    after_async_mfa = {async_simple_module, :after_async, 2}
+
     case result do
       {:ok, success_result} ->
         socket
@@ -158,6 +165,7 @@ defmodule Rephex.AsyncAction.Simple do
           &AsyncResult.failed(&1, reason)
         )
     end
+    |> then(&Rephex.Util.call_optional(after_async_mfa, [&1, result], &1))
   end
 
   def receive_message(%Socket{} = socket, loading_progress, async_keys) do
