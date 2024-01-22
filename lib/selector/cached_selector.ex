@@ -92,15 +92,12 @@ defmodule Rephex.Selector.CachedSelector do
       %__MODULE__{selector | result: result, prev_args: new_args}
     end
   end
+end
 
-  @spec update_selectors_in_socket(Socket.t()) :: Socket.t()
-  def update_selectors_in_socket(%Socket{} = socket) do
-    updated_selectors =
-      socket.assigns
-      |> Stream.filter(fn {_k, v} -> is_struct(v, __MODULE__) end)
-      |> Stream.map(fn {k, v} -> {k, update(v, socket)} end)
-      |> Enum.into(%{})
-
-    Phoenix.Component.assign(socket, updated_selectors)
+defimpl Rephex.Selectable, for: Rephex.Selector.CachedSelector do
+  def update_in_socket(selector, socket, selectable_keys) do
+    Rephex.Util.socket_update_in(socket, selectable_keys, fn _ ->
+      Rephex.Selector.CachedSelector.update(selector, socket)
+    end)
   end
 end

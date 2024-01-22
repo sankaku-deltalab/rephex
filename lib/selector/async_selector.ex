@@ -157,15 +157,6 @@ defmodule Rephex.Selector.AsyncSelector do
     end
   end
 
-  @spec update_selectors_in_socket(Socket.t()) :: Socket.t()
-  def update_selectors_in_socket(%Socket{} = socket) do
-    socket.assigns
-    |> Stream.filter(fn {_k, v} -> is_struct(v, __MODULE__) end)
-    |> Enum.reduce(socket, fn {k, _v}, socket ->
-      update_in_socket(socket, [k])
-    end)
-  end
-
   def resolve_in_socket(
         %Socket{} = socket,
         selector_keys,
@@ -202,5 +193,11 @@ defmodule Rephex.Selector.AsyncSelector do
       [k, rest] ->
         Phoenix.Component.assign(socket, k, %{k => update_in(socket, rest, func)})
     end
+  end
+end
+
+defimpl Rephex.Selectable, for: Rephex.Selector.AsyncSelector do
+  def update_in_socket(_selector, socket, selector_keys) do
+    Rephex.Selector.AsyncSelector.update_in_socket(socket, selector_keys)
   end
 end
