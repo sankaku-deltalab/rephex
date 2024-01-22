@@ -3,6 +3,7 @@ defmodule RephexTest.CachedSelectorTest do
 
   alias RephexTest.Fixture
   alias RephexTest.Fixture.{SelectorABSum, SelectorBCSum}
+  alias Rephex.Selector
   alias Rephex.Selector.CachedSelector
 
   describe "new" do
@@ -43,7 +44,7 @@ defmodule RephexTest.CachedSelectorTest do
       Fixture.new_socket_raw()
       |> Phoenix.Component.assign(initial_state)
       |> Phoenix.Component.assign(%{a: 1, b: 2, c: 3})
-      |> CachedSelector.update_selectors_in_socket()
+      |> Selector.update_in_socket()
 
     ab_sum = socket.assigns.ab_sum
     bc_sum = socket.assigns.bc_sum
@@ -63,7 +64,7 @@ defmodule RephexTest.CachedSelectorTest do
       Fixture.new_socket_raw()
       |> Phoenix.Component.assign(initial_state)
       |> Phoenix.Component.assign(%{a: 1, b: 2, c: 3})
-      |> CachedSelector.update_selectors_in_socket()
+      |> Selector.update_in_socket()
 
     ab_sum = socket.assigns.nest.ab_sum
     bc_sum = socket.assigns.nest.bc_sum

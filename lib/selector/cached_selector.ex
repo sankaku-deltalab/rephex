@@ -92,37 +92,6 @@ defmodule Rephex.Selector.CachedSelector do
       %__MODULE__{selector | result: result, prev_args: new_args}
     end
   end
-
-  @type option :: {:priority, [any()]} | {:exclude, [any()]}
-  @spec update_selectors_in_socket(Socket.t()) :: Socket.t()
-  @spec update_selectors_in_socket(Socket.t(), [option]) :: Socket.t()
-  def update_selectors_in_socket(%Socket{} = socket, opts \\ []) do
-    priority = Keyword.get(opts, :priority, [])
-    exclude = Keyword.get(opts, :exclude, [])
-    exclude_set = MapSet.new(exclude)
-    all_keys = Map.keys(socket.assigns)
-    priority_keys = Enum.filter(priority, fn key -> key not in exclude_set end)
-
-    other_keys =
-      Enum.filter(all_keys, fn key ->
-        not (key in priority_keys or key in exclude_set) and
-          is_struct(Map.get(socket.assigns, key), __MODULE__)
-      end)
-
-    updated_assigns =
-      socket
-      |> update_and_merge_assigns(priority_keys)
-      |> update_and_merge_assigns(other_keys)
-
-    Phoenix.Component.assign(socket, updated_assigns)
-  end
-
-  defp update_and_merge_assigns(socket, keys) do
-    Enum.reduce(keys, socket.assigns, fn key, acc ->
-      updated_value = update(Map.get(socket.assigns, key), socket)
-      Map.put(acc, key, updated_value)
-    end)
-  end
 end
 
 defimpl Rephex.Selectable, for: Rephex.Selector.CachedSelector do

@@ -157,35 +157,6 @@ defmodule Rephex.Selector.AsyncSelector do
     end
   end
 
-  @type option :: {:priority, [any()]} | {:exclude, [any()]}
-  @spec update_selectors_in_socket(Socket.t()) :: Socket.t()
-  @spec update_selectors_in_socket(Socket.t(), [option]) :: Socket.t()
-  def update_selectors_in_socket(%Socket{} = socket, opts \\ []) do
-    priority = Keyword.get(opts, :priority, [])
-    exclude = Keyword.get(opts, :exclude, [])
-
-    exclude_set = MapSet.new(exclude)
-    all_keys = Map.keys(socket.assigns)
-    priority_keys = Enum.filter(priority, fn key -> key not in exclude_set end)
-
-    other_keys =
-      Enum.filter(all_keys, fn key ->
-        not (key in priority_keys or key in exclude_set) and
-          is_struct(Map.get(socket.assigns, key), __MODULE__)
-      end)
-
-    # First update priority items, then the others
-    socket
-    |> update_keys_in_socket(priority_keys)
-    |> update_keys_in_socket(other_keys)
-  end
-
-  defp update_keys_in_socket(socket, keys) do
-    Enum.reduce(keys, socket, fn key, socket ->
-      update_in_socket(socket, [key])
-    end)
-  end
-
   def resolve_in_socket(
         %Socket{} = socket,
         selector_keys,
