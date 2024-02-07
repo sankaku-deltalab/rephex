@@ -1,7 +1,7 @@
 defmodule Rephex.AsyncAction.Simple.Meta do
   alias Phoenix.LiveView.Socket
 
-  defstruct last_loading_update_time: -1
+  defstruct last_loading_update_time: nil
 
   @meta_root :__rephex_meta_async_action_simple
 
@@ -27,18 +27,19 @@ defmodule Rephex.AsyncAction.Simple.Meta do
     )
   end
 
-  @spec update_loading_time_in_meta(Socket.t(), module()) :: Socket.t()
-  def update_loading_time_in_meta(%Socket{} = socket, async_module) when is_atom(async_module) do
+  @spec update_loading_time_in_socket(Socket.t(), module()) :: Socket.t()
+  def update_loading_time_in_socket(%Socket{} = socket, async_module)
+      when is_atom(async_module) do
     socket
-    |> Phoenix.Component.update(
-      @meta_root,
+    |> Rephex.State.Assigns.update_state_in(
+      [@meta_root],
       fn meta -> Map.update!(meta, async_module, &update_loading_time/1) end
     )
   end
 
   @spec get_meta(Socket.t(), module()) :: %__MODULE__{}
-  def get_meta(%Socket{assigns: assigns}, async_module) when is_atom(async_module) do
-    assigns[@meta_root][async_module]
+  def get_meta(%Socket{} = socket, async_module) when is_atom(async_module) do
+    Rephex.State.Assigns.get_state_in(socket, [@meta_root, async_module])
   end
 end
 
@@ -229,8 +230,9 @@ defmodule Rephex.AsyncAction.Simple do
     option = Rephex.Util.call_optional(mfa, [], %{})
     throttle = Map.get(option, :throttle, -1)
 
-    if now - last_time > throttle do
+    if last_time == nil or now - last_time > throttle do
       socket
+      |> Meta.update_loading_time_in_socket(async_simple_module)
       |> Rephex.State.Assigns.update_state_in(
         async_keys,
         &AsyncResult.loading(&1, loading_progress)
