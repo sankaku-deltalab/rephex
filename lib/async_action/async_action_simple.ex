@@ -1,7 +1,52 @@
+defmodule Rephex.AsyncAction.Simple.Meta do
+  alias Phoenix.LiveView.Socket
+
+  defstruct last_loading_update_time: -1
+
+  @meta_root :__rephex_meta_async_action_simple
+
+  @spec update_loading_time(%__MODULE__{}) :: %__MODULE__{}
+  def update_loading_time(%__MODULE__{} = meta) do
+    now = System.monotonic_time(:millisecond)
+
+    %__MODULE__{meta | last_loading_update_time: now}
+  end
+
+  @spec init_state(Socket.t()) :: Socket.t()
+  def init_state(%Socket{} = socket) do
+    socket
+    |> Rephex.State.Assigns.put_state(@meta_root, %{})
+  end
+
+  @spec reset_meta(Socket.t(), module()) :: Socket.t()
+  def reset_meta(%Socket{} = socket, async_module) when is_atom(async_module) do
+    socket
+    |> Rephex.State.Assigns.update_state_in(
+      [@meta_root, async_module],
+      fn _ -> %__MODULE__{} end
+    )
+  end
+
+  @spec update_loading_time_in_meta(Socket.t(), module()) :: Socket.t()
+  def update_loading_time_in_meta(%Socket{} = socket, async_module) when is_atom(async_module) do
+    socket
+    |> Phoenix.Component.update(
+      @meta_root,
+      fn meta -> Map.update!(meta, async_module, &update_loading_time/1) end
+    )
+  end
+
+  @spec get_meta(Socket.t(), module()) :: %__MODULE__{}
+  def get_meta(%Socket{assigns: assigns}, async_module) when is_atom(async_module) do
+    assigns[@meta_root][async_module]
+  end
+end
+
 defmodule Rephex.AsyncAction.Simple do
   alias Phoenix.LiveView.{Socket, AsyncResult}
   import Rephex.State.Assigns
   alias Rephex.AsyncAction.Handler
+  alias Rephex.AsyncAction.Simple.Meta
 
   @type loading_state() :: any()
   @type success_result() :: any()
@@ -24,13 +69,18 @@ defmodule Rephex.AsyncAction.Simple do
               result :: {:ok, success_result()} | {:exit, exit_reason()}
             ) :: Socket.t()
 
+  @callback option() :: %{optional(:throttle) => pos_integer()}
+
   @doc """
   If there is a possibility that the exit reason returns a value
   that cannot be included in socket.assigns, you need to transform the exit reason.
   """
   @callback convert_exit_reason(reason :: any()) :: any()
 
-  @optional_callbacks initial_loading_state: 2, convert_exit_reason: 1, after_async: 2
+  @optional_callbacks initial_loading_state: 2,
+                      convert_exit_reason: 1,
+                      after_async: 2,
+                      option: 0
 
   defmacro __using__(opt) do
     default_payload_type =
@@ -74,6 +124,7 @@ defmodule Rephex.AsyncAction.Simple do
       def receive_message(%Socket{} = socket, loading_progress) do
         Rephex.AsyncAction.Simple.receive_message(
           socket,
+          __MODULE__,
           loading_progress,
           unquote(async_keys)
         )
@@ -112,6 +163,7 @@ defmodule Rephex.AsyncAction.Simple do
         initial_loading_state = Rephex.Util.call_optional(mfa, [state, payload], true)
 
         socket
+        |> Meta.reset_meta(async_simple_module)
         |> update_state_in(async_keys, &AsyncResult.loading(&1, initial_loading_state))
         |> Handler.start_async_by_action(async_simple_module, fun_for_async)
 
@@ -168,11 +220,23 @@ defmodule Rephex.AsyncAction.Simple do
     |> then(&Rephex.Util.call_optional(after_async_mfa, [&1, result], &1))
   end
 
-  def receive_message(%Socket{} = socket, loading_progress, async_keys) do
-    socket
-    |> Rephex.State.Assigns.update_state_in(
-      async_keys,
-      &AsyncResult.loading(&1, loading_progress)
-    )
+  def receive_message(%Socket{} = socket, async_simple_module, loading_progress, async_keys) do
+    now = System.monotonic_time(:millisecond)
+
+    %Meta{last_loading_update_time: last_time} = Meta.get_meta(socket, async_simple_module)
+
+    mfa = {async_simple_module, :option, 0}
+    option = Rephex.Util.call_optional(mfa, [], %{})
+    throttle = Map.get(option, :throttle, -1)
+
+    if now - last_time > throttle do
+      socket
+      |> Rephex.State.Assigns.update_state_in(
+        async_keys,
+        &AsyncResult.loading(&1, loading_progress)
+      )
+    else
+      socket
+    end
   end
 end

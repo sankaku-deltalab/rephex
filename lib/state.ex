@@ -6,6 +6,7 @@ defmodule Rephex.State do
   def init(%Socket{} = socket, %{} = initial_state) do
     socket
     |> Phoenix.Component.assign(@root, initial_state)
+    |> Rephex.AsyncAction.Simple.Meta.init_state()
   end
 
   defmacro __using__(opt) do
@@ -41,6 +42,16 @@ defmodule Rephex.State.Assigns do
 
   def update_state(%Socket{} = socket, fun) when is_function(fun, 1) do
     Phoenix.Component.update(socket, @root, fun)
+  end
+
+  @doc """
+  Put value to Rephex state.
+  """
+  def put_state(%Socket{parent_pid: parent_pid}, _key, _value) when parent_pid != nil,
+    do: raise("Use this function only in LiveView (root).")
+
+  def put_state(%Socket{} = socket, key, value) do
+    Phoenix.Component.update(socket, @root, &Map.put(&1, key, value))
   end
 
   @doc """
