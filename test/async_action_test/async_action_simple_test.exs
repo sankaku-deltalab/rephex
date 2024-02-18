@@ -4,8 +4,6 @@ defmodule RephexTest.AsyncAction.Simple do
   alias RephexTest.Fixture.CounterState
   alias RephexTest.Fixture
 
-  doctest Rephex
-
   test "start_async turn AsyncResult to loading immediately" do
     socket =
       Fixture.new_socket_with_slices()
