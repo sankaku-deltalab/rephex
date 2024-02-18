@@ -85,4 +85,8 @@ defmodule Rephex.AsyncAction.Handler do
       when is_atom(async_module) do
     {:noreply, async_module.resolve(socket, async_fun_result)}
   end
+
+  defp live_view_api do
+    Application.fetch_env!(:rephex, :live_view_api)
+  end
 end
