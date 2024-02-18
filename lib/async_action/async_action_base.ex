@@ -17,6 +17,7 @@ end
 
 defmodule Rephex.AsyncAction.Handler do
   alias Phoenix.LiveView.Socket
+  alias Rephex.Api.LiveViewApi
 
   defmacro __using__(_opt \\ []) do
     quote do
@@ -44,7 +45,7 @@ defmodule Rephex.AsyncAction.Handler do
 
   def start_async_by_action(%Socket{} = socket, async_module, fun_for_async)
       when is_atom(async_module) and is_function(fun_for_async, 0) do
-    Phoenix.LiveView.start_async(
+    LiveViewApi.start_async(
       socket,
       {Rephex.AsyncAction.Handler, :result, async_module},
       fun_for_async
@@ -53,7 +54,7 @@ defmodule Rephex.AsyncAction.Handler do
 
   def cancel_async_by_action(%Socket{} = socket, async_module, reason)
       when is_atom(async_module) do
-    Phoenix.LiveView.cancel_async(
+    LiveViewApi.cancel_async(
       socket,
       {Rephex.AsyncAction.Handler, :result, async_module},
       reason
@@ -84,9 +85,5 @@ defmodule Rephex.AsyncAction.Handler do
       )
       when is_atom(async_module) do
     {:noreply, async_module.resolve(socket, async_fun_result)}
-  end
-
-  defp live_view_api do
-    Application.fetch_env!(:rephex, :live_view_api)
   end
 end
