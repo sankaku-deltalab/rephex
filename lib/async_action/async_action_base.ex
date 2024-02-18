@@ -18,6 +18,7 @@ end
 defmodule Rephex.AsyncAction.Handler do
   alias Phoenix.LiveView.Socket
   alias Rephex.Api.LiveViewApi
+  alias Rephex.Api.KernelApi
 
   defmacro __using__(_opt \\ []) do
     quote do
@@ -63,7 +64,7 @@ defmodule Rephex.AsyncAction.Handler do
 
   def send_message_from_action(lv_pid, async_module, message)
       when is_atom(async_module) and is_pid(lv_pid) do
-    send(lv_pid, {Rephex.AsyncAction.Handler, :message, async_module, message})
+    KernelApi.send(lv_pid, {Rephex.AsyncAction.Handler, :message, async_module, message})
   end
 
   def handle_info_by_async_message(
