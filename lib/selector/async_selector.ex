@@ -18,6 +18,7 @@ end
 
 defmodule Rephex.Selector.AsyncSelector.Handler do
   alias Phoenix.LiveView.Socket
+  alias Rephex.Api.LiveViewApi
 
   defmacro __using__(_opt \\ []) do
     quote do
@@ -40,7 +41,7 @@ defmodule Rephex.Selector.AsyncSelector.Handler do
 
   def start_async_by_selector(%Socket{} = socket, selector_keys, func)
       when is_function(func, 0) do
-    Phoenix.LiveView.start_async(socket, {__MODULE__, selector_keys}, func)
+    LiveViewApi.start_async(socket, {__MODULE__, selector_keys}, func)
   end
 
   def handle_async_select_result(

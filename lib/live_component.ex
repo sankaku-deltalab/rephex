@@ -4,6 +4,7 @@ defmodule Rephex.LiveComponent do
   @root Rephex.root()
 
   alias Phoenix.LiveView.Socket
+  alias Rephex.Api.KernelApi
 
   defmacro __using__(_opt \\ []) do
     quote do
@@ -48,7 +49,7 @@ defmodule Rephex.LiveComponent do
   """
   @spec call_in_root(v, (Socket.t() -> Socket.t())) :: v when v: any()
   def call_in_root(any, fun) when is_function(fun, 1) do
-    send(self(), {{Rephex.LiveComponent, :call_in_root}, fun})
+    KernelApi.send(self(), {{Rephex.LiveComponent, :call_in_root}, fun})
     any
   end
 end
