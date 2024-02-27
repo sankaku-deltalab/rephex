@@ -1,5 +1,8 @@
 defmodule RephexTest do
   use ExUnit.Case
+  import Mox
+
+  setup :verify_on_exit!
 
   alias Phoenix.LiveView.AsyncResult
   alias RephexTest.Fixture.CounterState
@@ -35,6 +38,9 @@ defmodule RephexTest do
   end
 
   test "continue add count delayed" do
+    Rephex.Api.MockLiveViewApi
+    |> expect(:start_async, fn socket, _name, _fun -> socket end)
+
     socket =
       Fixture.new_socket_with_slices()
       |> CounterState.AddCountAsync.start(%{amount: 2, delay: 1000})

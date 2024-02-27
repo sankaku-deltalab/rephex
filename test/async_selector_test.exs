@@ -1,5 +1,8 @@
 defmodule RephexTest.AsyncSelectorTest do
   use ExUnit.Case
+  import Mox
+
+  setup :verify_on_exit!
 
   alias Phoenix.LiveView.AsyncResult
   alias RephexTest.Fixture
@@ -15,6 +18,9 @@ defmodule RephexTest.AsyncSelectorTest do
   end
 
   test "update_in_socket" do
+    Rephex.Api.MockLiveViewApi
+    |> expect(:start_async, fn socket, _name, _fun -> socket end)
+
     ab_sum = AsyncSelector.new(AsyncSelectorABSum, init: 999)
 
     socket =
@@ -30,6 +36,9 @@ defmodule RephexTest.AsyncSelectorTest do
   end
 
   test "resolve_in_socket - ok" do
+    Rephex.Api.MockLiveViewApi
+    |> expect(:start_async, fn socket, _name, _fun -> socket end)
+
     ab_sum = AsyncSelector.new(AsyncSelectorABSum, init: 999)
 
     socket =
