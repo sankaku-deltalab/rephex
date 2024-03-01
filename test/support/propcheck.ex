@@ -21,7 +21,7 @@ defmodule RephexTest.PropCheck do
         import PropCheck.BasicTypes
         import PropCheck.TargetedPBT
 
-        import Els.PropCheck
+        import RephexTest.PropCheck
       end
     end
   end
