@@ -5,13 +5,15 @@ defmodule RephexTest.Fixture.AsyncActionStateful.State do
   @type t :: %{
           before_start_count: integer(),
           after_resolve_count: integer(),
-          result_1: %AsyncResult{}
+          result_1: %AsyncResult{},
+          result_2: %{term() => %AsyncResult{}}
         }
 
   @initial_state %{
     before_start_count: 0,
     after_resolve_count: 0,
-    result_1: %AsyncResult{}
+    result_1: %AsyncResult{},
+    result_2: %{}
   }
 
   use Rephex.State, initial_state: @initial_state
