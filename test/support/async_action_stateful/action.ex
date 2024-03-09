@@ -8,7 +8,7 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Action do
   @type progress :: {non_neg_integer(), non_neg_integer()}
 
   use Rephex.AsyncAction,
-    result_path: [:result_1],
+    result_path: [:result_single],
     payload_type: payload(),
     cancel_reason_type: cancel_reason(),
     progress_type: progress()
@@ -24,25 +24,18 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Action do
   # optional
   @impl true
   def before_start(socket, _result_path, payload) do
-    State.add_before_start_count(socket, payload.before_start_amount)
+    State.set_last_start_payload(socket, payload)
   end
 
   # optional
   @impl true
   def after_resolve(socket, _result_path, result) do
-    case result do
-      {:ok, %{after_resolve: after_resolve}} ->
-        socket
-        |> State.add_after_resolve_count(after_resolve)
-
-      {:exit, _} ->
-        socket
-    end
+    State.set_last_resolve_result(socket, result)
   end
 
   # optional
   @impl true
-  def generate_failed_value(_result_path, {:shutdown, why} = _reason) do
+  def generate_failed_value(_result_path, {:shutdown, {:cancel, why}} = _reason) do
     why
   end
 

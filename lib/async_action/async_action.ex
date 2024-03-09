@@ -29,13 +29,13 @@ defmodule Rephex.AsyncAction do
 
       @spec start(Socket.t(), unquote(payload_type)) :: Socket.t()
       def start(%Socket{} = socket, payload) do
-        Backend.start(socket, __MODULE__, unquote(result_path), payload)
+        Backend.start(socket, {__MODULE__, unquote(result_path)}, payload)
       end
 
       @spec cancel(Socket.t()) :: Socket.t()
       @spec cancel(Socket.t(), unquote(cancel_reason_type)) :: Socket.t()
       def cancel(%Socket{} = socket, reason \\ {:shutdown, :cancel}) do
-        Backend.cancel(socket, __MODULE__, unquote(result_path), reason)
+        Backend.cancel(socket, {__MODULE__, unquote(result_path)}, reason)
       end
     end
   end

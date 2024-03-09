@@ -3,17 +3,17 @@ defmodule RephexTest.Fixture.AsyncActionStateful.State do
   import Rephex.State.Assigns
 
   @type t :: %{
-          before_start_count: integer(),
-          after_resolve_count: integer(),
-          result_1: %AsyncResult{},
-          result_2: %{term() => %AsyncResult{}}
+          last_start_payload: map(),
+          last_resolve_result: term(),
+          result_single: %AsyncResult{},
+          result_multi: %{term() => %AsyncResult{}}
         }
 
   @initial_state %{
-    before_start_count: 0,
-    after_resolve_count: 0,
-    result_1: %AsyncResult{},
-    result_2: %{}
+    last_start_payload: %{},
+    last_resolve_result: nil,
+    result_single: %AsyncResult{},
+    result_multi: %{}
   }
 
   use Rephex.State, initial_state: @initial_state
@@ -26,11 +26,11 @@ defmodule RephexTest.Fixture.AsyncActionStateful.State do
     |> Map.new()
   end
 
-  def add_before_start_count(socket, amount) do
-    update_state_in(socket, [:before_start_count], &(&1 + amount))
+  def set_last_start_payload(socket, payload) do
+    put_state_in(socket, [:last_start_payload], payload)
   end
 
-  def add_after_resolve_count(socket, amount) do
-    update_state_in(socket, [:after_resolve_count], &(&1 + amount))
+  def set_last_resolve_result(socket, result) do
+    put_state_in(socket, [:last_resolve_result], result)
   end
 end

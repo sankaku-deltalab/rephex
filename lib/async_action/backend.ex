@@ -8,7 +8,7 @@ defmodule Rephex.AsyncAction.Backend do
   @doc """
   `YourAction.start(socket, ...)` call this.
   """
-  def start(%Socket{} = socket, action_module, result_path, payload) do
+  def start(%Socket{} = socket, {action_module, result_path}, payload) do
     socket = socket |> put_async_result_if_not_exist(result_path)
 
     case get_state_in(socket, result_path) do
@@ -21,7 +21,7 @@ defmodule Rephex.AsyncAction.Backend do
         update_progress =
           &KernelApi.send(
             lv_pid,
-            gen_update_progress_message(action_module, result_path, &1)
+            gen_update_progress_message({action_module, result_path}, &1)
           )
 
         async_fun_raw = &action_module.start_async/4
@@ -29,9 +29,9 @@ defmodule Rephex.AsyncAction.Backend do
 
         socket
         |> call_before_start(result_path, payload, action_module)
-        |> update_progress(action_module, result_path, initial_progress)
+        |> update_progress({action_module, result_path}, initial_progress)
         |> LiveViewApi.start_async(
-          gen_start_async_name(action_module, result_path),
+          gen_start_async_name({action_module, result_path}),
           async_fun
         )
 
@@ -43,10 +43,10 @@ defmodule Rephex.AsyncAction.Backend do
   @doc """
   `YourAction.cancel(socket, ...)` call this.
   """
-  def cancel(%Socket{} = socket, action_module, result_path, reason) do
+  def cancel(%Socket{} = socket, {action_module, result_path}, reason) do
     socket
     |> LiveViewApi.cancel_async(
-      gen_start_async_name(action_module, result_path),
+      gen_start_async_name({action_module, result_path}),
       reason
     )
   end
@@ -54,8 +54,7 @@ defmodule Rephex.AsyncAction.Backend do
   @doc """
   `LiveView.handle_info(..., socket)` call this.
   """
-  def update_progress(%Socket{} = socket, action_module, result_path, progress) do
-    meta_key = {action_module, result_path}
+  def update_progress(%Socket{} = socket, {action_module, result_path} = meta_key, progress) do
     now = System.monotonic_time(:millisecond)
     last_time = Meta.get_last_progress_updated_time(socket, meta_key)
     option = call_option(action_module)
@@ -73,7 +72,7 @@ defmodule Rephex.AsyncAction.Backend do
   @doc """
   `LiveView.handle_async(..., result, socket)` call this.
   """
-  def resolve(%Socket{} = socket, action_module, result_path, result) do
+  def resolve(%Socket{} = socket, {action_module, result_path}, result) do
     case result do
       {:ok, success_result} ->
         socket
@@ -114,12 +113,12 @@ defmodule Rephex.AsyncAction.Backend do
     Rephex.Util.call_optional(mfa, [], %{})
   end
 
-  defp gen_update_progress_message(action_module, result_path, progress) do
-    {Rephex.AsyncAction.Backend, :update_progress, action_module, result_path, progress}
+  defp gen_update_progress_message({action_module, result_path}, progress) do
+    {Rephex.AsyncAction.Backend, :update_progress, {action_module, result_path}, progress}
   end
 
-  defp gen_start_async_name(action_module, result_path) do
-    {Rephex.AsyncAction.Backend, :start_async, action_module, result_path}
+  defp gen_start_async_name({action_module, result_path}) do
+    {Rephex.AsyncAction.Backend, :start_async, {action_module, result_path}}
   end
 
   defp put_async_result_if_not_exist(socket, result_path) do

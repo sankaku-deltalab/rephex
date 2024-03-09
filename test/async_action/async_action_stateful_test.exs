@@ -7,7 +7,10 @@ defmodule RephexTest.AsyncActionStatefulTest do
   setup :verify_on_exit!
 
   alias Rephex.State.Assigns
-  alias RephexTest.Fixture.AsyncActionStateful.{ActionServer, Model, State}
+  alias RephexTest.Fixture.AsyncActionStateful.{ActionServer, Model, State, Action, ActionMulti}
+
+  @action_single [Action]
+  @action_multi [ActionMulti]
 
   property "Rephex.AsyncAction stateful test", [:verbose] do
     forall cmds <- commands(__MODULE__) do
@@ -20,13 +23,13 @@ defmodule RephexTest.AsyncActionStatefulTest do
         IO.puts("""
         ---
         history:
-        #{history |> Enum.map(&inspect/1) |> Enum.map(&(&1 <> "\n---\n"))}
+        #{history |> Enum.map(&inspect(&1, pretty: true, width: 120)) |> Enum.map(&(&1 <> "\n---\n"))}
         ---
         state:
-        #{inspect(state)}
+        #{inspect(state, pretty: true, width: 120)}
         ---
         result:
-        #{inspect(result)}
+        #{inspect(result, pretty: true, width: 120)}
         ---
         """)
       )
@@ -40,66 +43,69 @@ defmodule RephexTest.AsyncActionStatefulTest do
 
   @impl true
   def command(state) do
-    running_result_path_list =
-      state.running_payloads
-      |> Enum.map(fn {result_path, _payload} -> result_path end)
+    running_items = Enum.to_list(state.running_items)
 
-    static_items = [
-      {12, {:call, ActionServer, :start, [gen_result_path(), gen_payload()]}}
+    running_items_multi =
+      running_items
+      |> Enum.filter(fn {m, _} -> m in @action_multi end)
+
+    common_choices = [
+      {12, {:call, ActionServer, :start_single, [gen_action(), gen_payload()]}},
+      {12, {:call, ActionServer, :cancel_single, [gen_action(), gen_cancel_reason()]}},
+      {12, {:call, ActionServer, :start_multi, [gen_action_multi(), gen_payload()]}},
+      {6, {:call, ActionServer, :cancel_multi, [gen_action_multi(), gen_cancel_reason()]}}
     ]
 
-    dynamic_items =
-      if running_result_path_list == [] do
+    cancel_multi_choices =
+      if running_items_multi == [] do
         []
       else
+        [{6, {:call, ActionServer, :cancel_multi, [gen_action_multi(), gen_cancel_reason()]}}]
+      end
+
+    update_choices =
+      if running_items == [] do
+        []
+      else
+        gen_running_items = oneof(running_items)
+
         [
           {12,
            {:call, ActionServer, :async_process_update_progress,
-            [oneof(running_result_path_list), gen_progress()]}},
+            [gen_running_items, gen_progress()]}},
           {12,
            {:call, ActionServer, :async_process_resolved,
-            [oneof(running_result_path_list), gen_resolve_result()]}},
-          {12,
-           {:call, ActionServer, :cancel, [oneof(running_result_path_list), gen_cancel_reason()]}}
+            [gen_running_items, gen_resolve_result()]}}
         ]
       end
 
-    frequency(static_items ++ dynamic_items)
+    frequency(common_choices ++ update_choices ++ cancel_multi_choices)
   end
 
-  def gen_result_path() do
-    [:result_1]
-  end
+  def gen_action(), do: oneof(@action_single)
 
-  def gen_payload() do
-    let [bsa <- pos_integer(), ra <- pos_integer()] do
-      %{
-        before_start_amount: bsa,
-        resolve_amount: ra
-      }
+  def gen_action_multi() do
+    let [m <- oneof(@action_multi), k <- gen_multi_key()] do
+      {m, k}
     end
   end
 
+  def gen_multi_key(), do: term()
+  def gen_payload(), do: map(term(), term())
   def gen_progress(), do: term()
 
   def gen_resolve_result() do
     frequency([
-      {12, {:ok, gen_success_result()}},
+      {12, {:ok, term()}},
       {6, {:exit, term()}},
       {6, {:exit, gen_cancel_reason()}}
     ])
   end
 
-  def gen_success_result() do
-    let [resolved <- pos_integer(), after_resolve <- pos_integer()] do
-      %{resolved: resolved, after_resolve: after_resolve}
-    end
-  end
-
   def gen_cancel_reason() do
     frequency([
-      {12, {:shutdown, utf8()}},
-      {12, {:shutdown, atom()}}
+      {12, {:shutdown, {:cancel, utf8()}}},
+      {12, {:shutdown, {:cancel, atom()}}}
     ])
   end
 
@@ -109,17 +115,26 @@ defmodule RephexTest.AsyncActionStatefulTest do
   end
 
   @impl true
-  def next_state(%Model{} = state, _res, {:call, ActionServer, :start, [result_path, payload]}) do
-    Model.start(state, result_path, payload)
+  def next_state(%Model{} = state, _res, {:call, ActionServer, :start_single, [module, payload]}) do
+    Model.start_single(state, module, payload)
   end
 
   @impl true
   def next_state(
         %Model{} = state,
         _res,
-        {:call, ActionServer, :async_process_update_progress, [result_path, progress]}
+        {:call, ActionServer, :start_multi, [{module, key}, payload]}
       ) do
-    Model.async_process_update_progress(state, result_path, progress)
+    Model.start_multi(state, {module, key}, payload)
+  end
+
+  @impl true
+  def next_state(
+        %Model{} = state,
+        _res,
+        {:call, ActionServer, :async_process_update_progress, [{action, result_path}, progress]}
+      ) do
+    Model.async_process_update_progress(state, {action, result_path}, progress)
   end
 
   @impl true
@@ -135,23 +150,38 @@ defmodule RephexTest.AsyncActionStatefulTest do
   def next_state(
         %Model{} = state,
         _res,
-        {:call, ActionServer, :cancel, [result_path, cancel_reason]}
+        {:call, ActionServer, :cancel_single, [action_module, cancel_reason]}
       ) do
-    Model.cancel(state, result_path, cancel_reason)
+    Model.cancel_single(state, action_module, cancel_reason)
   end
 
-  # @impl true
-  # def next_state(%Model{} = _state, _res, _) do
-  #   raise "not implemented"
-  # end
+  @impl true
+  def next_state(
+        %Model{} = state,
+        _res,
+        {:call, ActionServer, :cancel_multi, [{module, key}, cancel_reason]}
+      ) do
+    Model.cancel_multi(state, module, key, cancel_reason)
+  end
 
   @impl true
   def postcondition(
         %Model{} = prev_model,
-        {:call, ActionServer, :start, [result_path, payload]},
+        {:call, ActionServer, :start_single, [module, payload]},
         socket
       ) do
-    model = Model.start(prev_model, result_path, payload)
+    model = Model.start_single(prev_model, module, payload)
+
+    assert get_real_state(socket) == model.state
+  end
+
+  @impl true
+  def postcondition(
+        %Model{} = prev_model,
+        {:call, ActionServer, :start_multi, [{module, key}, payload]},
+        socket
+      ) do
+    model = Model.start_multi(prev_model, {module, key}, payload)
 
     assert get_real_state(socket) == model.state
   end
@@ -181,10 +211,21 @@ defmodule RephexTest.AsyncActionStatefulTest do
   @impl true
   def postcondition(
         %Model{} = prev_model,
-        {:call, ActionServer, :cancel, [result_path, cancel_reason]},
+        {:call, ActionServer, :cancel_single, [module, cancel_reason]},
         socket
       ) do
-    model = Model.cancel(prev_model, result_path, cancel_reason)
+    model = Model.cancel_single(prev_model, module, cancel_reason)
+
+    assert get_real_state(socket) == model.state
+  end
+
+  @impl true
+  def postcondition(
+        %Model{} = prev_model,
+        {:call, ActionServer, :cancel_multi, [{module, key}, cancel_reason]},
+        socket
+      ) do
+    model = Model.cancel_multi(prev_model, module, key, cancel_reason)
 
     assert get_real_state(socket) == model.state
   end

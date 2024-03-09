@@ -38,14 +38,14 @@ defmodule Rephex.AsyncActionMulti do
         result_path = unquote(result_map_path) ++ [key]
 
         socket
-        |> Backend.start(__MODULE__, result_path, payload)
+        |> Backend.start({__MODULE__, result_path}, payload)
       end
 
       @spec cancel(Socket.t(), unquote(key_type)) :: Socket.t()
       @spec cancel(Socket.t(), unquote(key_type), unquote(cancel_reason_type)) :: Socket.t()
       def cancel(%Socket{} = socket, key, reason \\ {:shutdown, :cancel}) do
         result_path = unquote(result_map_path) ++ [key]
-        Backend.cancel(socket, __MODULE__, result_path, reason)
+        Backend.cancel(socket, {__MODULE__, result_path}, reason)
       end
     end
   end
