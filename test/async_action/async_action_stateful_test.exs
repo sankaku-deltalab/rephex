@@ -115,56 +115,6 @@ defmodule RephexTest.AsyncActionStatefulTest do
   end
 
   @impl true
-  def next_state(%Model{} = state, _res, {:call, ActionServer, :start_single, [module, payload]}) do
-    Model.start_single(state, module, payload)
-  end
-
-  @impl true
-  def next_state(
-        %Model{} = state,
-        _res,
-        {:call, ActionServer, :start_multi, [{module, key}, payload]}
-      ) do
-    Model.start_multi(state, {module, key}, payload)
-  end
-
-  @impl true
-  def next_state(
-        %Model{} = state,
-        _res,
-        {:call, ActionServer, :async_process_update_progress, [{action, result_path}, progress]}
-      ) do
-    Model.async_process_update_progress(state, {action, result_path}, progress)
-  end
-
-  @impl true
-  def next_state(
-        %Model{} = state,
-        _res,
-        {:call, ActionServer, :async_process_resolved, [result_path, result]}
-      ) do
-    Model.async_process_resolved(state, result_path, result)
-  end
-
-  @impl true
-  def next_state(
-        %Model{} = state,
-        _res,
-        {:call, ActionServer, :cancel_single, [action_module, cancel_reason]}
-      ) do
-    Model.cancel_single(state, action_module, cancel_reason)
-  end
-
-  @impl true
-  def next_state(
-        %Model{} = state,
-        _res,
-        {:call, ActionServer, :cancel_multi, [{module, key}, cancel_reason]}
-      ) do
-    Model.cancel_multi(state, module, key, cancel_reason)
-  end
-
-  @impl true
   def postcondition(
         %Model{} = prev_model,
         {:call, ActionServer, :start_single, [module, payload]},
@@ -234,5 +184,55 @@ defmodule RephexTest.AsyncActionStatefulTest do
     socket
     |> Assigns.get_state()
     |> State.extract()
+  end
+
+  @impl true
+  def next_state(%Model{} = state, _res, {:call, ActionServer, :start_single, [module, payload]}) do
+    Model.start_single(state, module, payload)
+  end
+
+  @impl true
+  def next_state(
+        %Model{} = state,
+        _res,
+        {:call, ActionServer, :start_multi, [{module, key}, payload]}
+      ) do
+    Model.start_multi(state, {module, key}, payload)
+  end
+
+  @impl true
+  def next_state(
+        %Model{} = state,
+        _res,
+        {:call, ActionServer, :async_process_update_progress, [{action, result_path}, progress]}
+      ) do
+    Model.async_process_update_progress(state, {action, result_path}, progress)
+  end
+
+  @impl true
+  def next_state(
+        %Model{} = state,
+        _res,
+        {:call, ActionServer, :async_process_resolved, [result_path, result]}
+      ) do
+    Model.async_process_resolved(state, result_path, result)
+  end
+
+  @impl true
+  def next_state(
+        %Model{} = state,
+        _res,
+        {:call, ActionServer, :cancel_single, [action_module, cancel_reason]}
+      ) do
+    Model.cancel_single(state, action_module, cancel_reason)
+  end
+
+  @impl true
+  def next_state(
+        %Model{} = state,
+        _res,
+        {:call, ActionServer, :cancel_multi, [{module, key}, cancel_reason]}
+      ) do
+    Model.cancel_multi(state, module, key, cancel_reason)
   end
 end
