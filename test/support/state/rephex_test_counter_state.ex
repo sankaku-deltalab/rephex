@@ -32,75 +32,75 @@ defmodule RephexTest.Fixture.CounterState do
   end
 end
 
-defmodule RephexTest.Fixture.CounterState.AddCountAsync do
-  @type payload :: %{amount: 2, delay: 1000}
-  @type message :: nil
-  @type cancel_reason :: any()
+# defmodule RephexTest.Fixture.CounterState.AddCountAsync do
+#   @type payload :: %{amount: 2, delay: 1000}
+#   @type message :: nil
+#   @type cancel_reason :: any()
 
-  use Rephex.AsyncAction, payload_type: payload, cancel_reason_type: cancel_reason
+#   use Rephex.AsyncAction, payload_type: payload, cancel_reason_type: cancel_reason
 
-  alias Phoenix.LiveView.{AsyncResult, Socket}
-  import Rephex.State.Assigns
-  alias RephexTest.Fixture.CounterState
+#   alias Phoenix.LiveView.{AsyncResult, Socket}
+#   import Rephex.State.Assigns
+#   alias RephexTest.Fixture.CounterState
 
-  @impl true
-  def before_async(%Socket{} = socket, %{amount: amount} = _payload) do
-    case get_state_in(socket, [:loading_async]) do
-      %AsyncResult{loading: nil} ->
-        {:continue,
-         socket
-         |> CounterState.add_count(%{amount: amount})
-         |> update_state_in([:loading_async], &AsyncResult.loading(&1))}
+#   @impl true
+#   def before_async(%Socket{} = socket, %{amount: amount} = _payload) do
+#     case get_state_in(socket, [:loading_async]) do
+#       %AsyncResult{loading: nil} ->
+#         {:continue,
+#          socket
+#          |> CounterState.add_count(%{amount: amount})
+#          |> update_state_in([:loading_async], &AsyncResult.loading(&1))}
 
-      _ ->
-        {:abort, socket}
-    end
-  end
+#       _ ->
+#         {:abort, socket}
+#     end
+#   end
 
-  @impl true
-  def start_async(_state, %{amount: amount, delay: delay} = _payload, _send_msg)
-      when is_integer(amount) and is_integer(delay) do
-    :timer.sleep(delay)
-    amount
-  end
+#   @impl true
+#   def start_async(_state, %{amount: amount, delay: delay} = _payload, _send_msg)
+#       when is_integer(amount) and is_integer(delay) do
+#     :timer.sleep(delay)
+#     amount
+#   end
 
-  @impl true
-  def resolve(%Socket{} = socket, result) do
-    case result do
-      {:ok, amount} ->
-        socket
-        |> CounterState.add_count(%{amount: amount})
-        |> update_state_in([:loading_async], &AsyncResult.ok(&1, amount))
+#   @impl true
+#   def resolve(%Socket{} = socket, result) do
+#     case result do
+#       {:ok, amount} ->
+#         socket
+#         |> CounterState.add_count(%{amount: amount})
+#         |> update_state_in([:loading_async], &AsyncResult.ok(&1, amount))
 
-      {:exit, _} ->
-        socket
-    end
-  end
+#       {:exit, _} ->
+#         socket
+#     end
+#   end
 
-  @impl true
-  def receive_message(%Socket{} = socket, _content) do
-    socket
-  end
+#   @impl true
+#   def receive_message(%Socket{} = socket, _content) do
+#     socket
+#   end
 
-  @impl true
-  def before_cancel(%Socket{} = socket, _reason) do
-    {:continue, socket}
-  end
-end
+#   @impl true
+#   def before_cancel(%Socket{} = socket, _reason) do
+#     {:continue, socket}
+#   end
+# end
 
-defmodule RephexTest.Fixture.CounterState.SomethingAsyncSimple do
-  use Rephex.AsyncAction.Simple,
-    async_keys: [:something_async],
-    payload_type: %{},
-    cancel_reason_type: any()
+# defmodule RephexTest.Fixture.CounterState.SomethingAsyncSimple do
+#   use Rephex.AsyncAction.Simple,
+#     async_keys: [:something_async],
+#     payload_type: %{},
+#     cancel_reason_type: any()
 
-  @impl true
-  def start_async(_state, %{} = _payload, progress) do
-    for i <- 0..4 do
-      progress.({i, 5})
-      :timer.sleep(200)
-    end
+#   @impl true
+#   def start_async(_state, %{} = _payload, progress) do
+#     for i <- 0..4 do
+#       progress.({i, 5})
+#       :timer.sleep(200)
+#     end
 
-    "ok ok ok"
-  end
-end
+#     "ok ok ok"
+#   end
+# end

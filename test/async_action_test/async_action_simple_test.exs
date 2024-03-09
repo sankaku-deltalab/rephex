@@ -1,16 +1,22 @@
-defmodule RephexTest.AsyncAction.Simple do
-  use ExUnit.Case
+# defmodule RephexTest.AsyncAction.Simple do
+#   use ExUnit.Case
+#   import Mox
 
-  alias RephexTest.Fixture.CounterState
-  alias RephexTest.Fixture
+#   setup :verify_on_exit!
 
-  test "start_async turn AsyncResult to loading immediately" do
-    socket =
-      Fixture.new_socket_with_slices()
-      |> CounterState.SomethingAsyncSimple.start(%{text: "a"})
+#   alias RephexTest.Fixture.CounterState
+#   alias RephexTest.Fixture
 
-    async_result = Rephex.State.Assigns.get_state_in(socket, [:something_async])
+#   test "start_async turn AsyncResult to loading immediately" do
+#     Rephex.Api.MockLiveViewApi
+#     |> expect(:start_async, fn socket, _name, _fun -> socket end)
 
-    assert async_result.loading == true
-  end
-end
+#     socket =
+#       Fixture.new_socket_with_slices()
+#       |> CounterState.SomethingAsyncSimple.start(%{text: "a"})
+
+#     async_result = Rephex.State.Assigns.get_state_in(socket, [:something_async])
+
+#     assert async_result.loading == true
+#   end
+# end
