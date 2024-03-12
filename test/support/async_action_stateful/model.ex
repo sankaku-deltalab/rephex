@@ -59,8 +59,18 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
   end
 
   def async_process_update_progress(model, {_action_module, result_path}, progress) do
+    # Ignore update progress if not running
     state =
-      update_in(model.state, result_path, &AsyncResult.loading(&1, progress))
+      case get_in(model.state, result_path) do
+        %AsyncResult{loading: nil} ->
+          model.state
+
+        %AsyncResult{} ->
+          update_in(model.state, result_path, &AsyncResult.loading(&1, progress))
+
+        _ ->
+          model.state
+      end
 
     %__MODULE__{model | state: state}
   end

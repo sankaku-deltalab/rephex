@@ -27,9 +27,14 @@ defmodule Rephex.AsyncAction.Backend do
         async_fun_raw = &action_module.start_async/4
         async_fun = fn -> async_fun_raw.(state, result_path, payload, update_progress) end
 
+        now = System.monotonic_time(:millisecond)
+
         socket
         |> call_before_start(result_path, payload, action_module)
-        |> update_progress({action_module, result_path}, initial_progress)
+        |> update_loading_status!({action_module, result_path},
+          progress: initial_progress,
+          now: now
+        )
         |> LiveViewApi.start_async(
           gen_start_async_name({action_module, result_path}),
           async_fun
@@ -60,13 +65,26 @@ defmodule Rephex.AsyncAction.Backend do
     option = call_option(action_module)
     throttle = Map.get(option, :throttle, -1)
 
-    if last_time == nil or now - last_time > throttle do
-      socket
-      |> Meta.notify_progress_updated(meta_key, now)
-      |> update_state_in(result_path, &AsyncResult.loading(&1, progress))
+    throttle_ok = last_time == nil or now - last_time > throttle
+
+    with true <- throttle_ok,
+         %AsyncResult{loading: v} when v != nil <- get_state_in(socket, result_path) do
+      update_loading_status!(socket, meta_key, progress: progress, now: now)
     else
-      socket
+      _ ->
+        socket
     end
+  end
+
+  defp update_loading_status!(
+         %Socket{} = socket,
+         {_action_module, result_path} = meta_key,
+         progress: progress,
+         now: now
+       ) do
+    socket
+    |> Meta.notify_progress_updated(meta_key, now)
+    |> update_state_in(result_path, &AsyncResult.loading(&1, progress))
   end
 
   @doc """

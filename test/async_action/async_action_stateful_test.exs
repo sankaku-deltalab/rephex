@@ -53,7 +53,10 @@ defmodule RephexTest.AsyncActionStatefulTest do
       {12, {:call, ActionServer, :start_single, [gen_action(), gen_payload()]}},
       {12, {:call, ActionServer, :cancel_single, [gen_action(), gen_cancel_reason()]}},
       {12, {:call, ActionServer, :start_multi, [gen_action_multi(), gen_payload()]}},
-      {6, {:call, ActionServer, :cancel_multi, [gen_action_multi(), gen_cancel_reason()]}}
+      {6, {:call, ActionServer, :cancel_multi, [gen_action_multi(), gen_cancel_reason()]}},
+      {12,
+       {:call, ActionServer, :async_process_update_progress,
+        [gen_random_running_item(), gen_progress()]}}
     ]
 
     cancel_multi_choices =
@@ -107,6 +110,25 @@ defmodule RephexTest.AsyncActionStatefulTest do
       {12, {:shutdown, {:cancel, utf8()}}},
       {12, {:shutdown, {:cancel, atom()}}}
     ])
+  end
+
+  def gen_random_running_item() do
+    oneof([
+      gen_single_running(),
+      gen_multi_running()
+    ])
+  end
+
+  def gen_single_running() do
+    oneof([
+      {Action, [:result_single]}
+    ])
+  end
+
+  def gen_multi_running() do
+    let key <- gen_multi_key() do
+      {ActionMulti, [:result_multi, key]}
+    end
   end
 
   @impl true
