@@ -3,7 +3,7 @@ defmodule Rephex.AsyncAction.Backend do
 
   import Rephex.State.Assigns
   alias Rephex.AsyncAction.Meta
-  alias Rephex.Api.{LiveViewApi, KernelApi}
+  alias Rephex.Api.{LiveViewApi, KernelApi, SystemApi}
 
   @doc """
   `YourAction.start(socket, ...)` call this.
@@ -27,7 +27,7 @@ defmodule Rephex.AsyncAction.Backend do
         async_fun_raw = &action_module.start_async/4
         async_fun = fn -> async_fun_raw.(state, result_path, payload, update_progress) end
 
-        now = System.monotonic_time(:millisecond)
+        now = SystemApi.monotonic_time(:millisecond)
 
         socket
         |> call_before_start(result_path, payload, action_module)
@@ -60,7 +60,7 @@ defmodule Rephex.AsyncAction.Backend do
   `LiveView.handle_info(..., socket)` call this.
   """
   def update_progress(%Socket{} = socket, {action_module, result_path} = meta_key, progress) do
-    now = System.monotonic_time(:millisecond)
+    now = SystemApi.monotonic_time(:millisecond)
     last_time = Meta.get_last_progress_updated_time(socket, meta_key)
     option = call_option(action_module)
     throttle = Map.get(option, :throttle, -1)
