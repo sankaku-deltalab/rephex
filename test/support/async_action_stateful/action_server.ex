@@ -3,7 +3,8 @@ defmodule RephexTest.Fixture.AsyncActionStateful.ActionServer do
   alias Phoenix.LiveView.Socket
 
   @type state :: %{
-          socket: Socket.t()
+          socket: Socket.t(),
+          time_ms: integer()
         }
 
   import Mox
@@ -13,7 +14,7 @@ defmodule RephexTest.Fixture.AsyncActionStateful.ActionServer do
 
   def start_link() do
     {:ok, socket} = LiveView.mount(%{}, %{}, %Socket{})
-    state = %{socket: socket}
+    state = %{socket: socket, time_ms: -9999}
 
     GenServer.start_link(__MODULE__, state, name: __MODULE__)
   end
@@ -101,6 +102,13 @@ defmodule RephexTest.Fixture.AsyncActionStateful.ActionServer do
     |> call_fun()
   end
 
+  def consume_time(time_ms) do
+    fn state ->
+      {:reply, state.time_ms, %{state | time_ms: state.time_ms + time_ms}}
+    end
+    |> call_fun()
+  end
+
   defp cancel_expect({action_module, result_path}, reason) do
     Rephex.Api.MockLiveViewApi
     |> expect(
@@ -125,6 +133,12 @@ defmodule RephexTest.Fixture.AsyncActionStateful.ActionServer do
   end
 
   def handle_call({:call_fun, fun}, _from, state) do
+    Rephex.Api.MockSystemApi
+    |> stub(
+      :monotonic_time,
+      fn :millisecond -> state.time_ms end
+    )
+
     fun.(state)
   end
 end

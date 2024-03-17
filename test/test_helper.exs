@@ -6,5 +6,8 @@ Application.put_env(:rephex, :kernel_api, Rephex.Api.MockKernelApi)
 Mox.defmock(Rephex.Api.MockLiveViewApi, for: Rephex.Api.LiveViewApi)
 Application.put_env(:rephex, :live_view_api, Rephex.Api.MockLiveViewApi)
 
+Mox.defmock(Rephex.Api.MockSystemApi, for: Rephex.Api.SystemApi)
+Application.put_env(:rephex, :system_api, Rephex.Api.MockSystemApi)
+
 # Mox.defmock(RephexTest.MockAsyncAction, for: RephexTest.Api.AsyncAction)
 # Application.put_env(:rephex_test, :async_action_api, RephexTest.MockAsyncAction)
