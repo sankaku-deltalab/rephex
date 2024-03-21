@@ -11,7 +11,8 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Action do
     result_path: [:result_single],
     payload_type: payload(),
     cancel_reason_type: cancel_reason(),
-    progress_type: progress()
+    progress_type: progress(),
+    progress_throttle: 10
 
   alias RephexTest.Fixture.AsyncActionStateful.State
 
