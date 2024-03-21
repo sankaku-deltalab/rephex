@@ -25,23 +25,23 @@ defmodule RephexTest.Fixture.AsyncActionStateful.ActionServer do
     GenServer.stop(__MODULE__)
   end
 
-  def start_single(action_module, payload) do
+  def start_single(action_module, payload, opts) do
     result_path = [:result_single]
 
     fn state ->
       start_async_stub({action_module, result_path})
-      socket = action_module.start(state.socket, payload)
+      socket = action_module.start(state.socket, payload, opts)
       {:reply, socket, %{state | socket: socket}}
     end
     |> call_fun()
   end
 
-  def start_multi({action_module, key}, payload) do
+  def start_multi({action_module, key}, payload, opts) do
     result_path = [:result_multi, key]
 
     fn state ->
       start_async_stub({action_module, result_path})
-      socket = action_module.start(state.socket, key, payload)
+      socket = action_module.start(state.socket, key, payload, opts)
       {:reply, socket, %{state | socket: socket}}
     end
     |> call_fun()

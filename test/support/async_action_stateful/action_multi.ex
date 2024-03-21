@@ -1,6 +1,7 @@
 defmodule RephexTest.Fixture.AsyncActionStateful.ActionMulti do
   use Rephex.AsyncActionMulti,
-    result_map_path: [:result_multi]
+    result_map_path: [:result_multi],
+    progress_throttle: 25
 
   alias RephexTest.Fixture.AsyncActionStateful.Action
 

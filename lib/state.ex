@@ -6,7 +6,6 @@ defmodule Rephex.State do
   def init(%Socket{} = socket, %{} = initial_state) do
     socket
     |> Phoenix.Component.assign(@root, initial_state)
-    |> Rephex.AsyncAction.Meta.init_state()
   end
 
   defmacro __using__(opt) do

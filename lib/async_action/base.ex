@@ -25,11 +25,10 @@ defmodule Rephex.AsyncAction.Base do
               (progress() -> nil)
             ) :: success_result()
 
-  @callback option() :: %{optional(:throttle) => pos_integer()}
+  @callback options() :: %{optional(:throttle) => non_neg_integer()}
 
   @optional_callbacks initial_progress: 2,
                       before_start: 3,
                       after_resolve: 3,
-                      generate_failed_value: 2,
-                      option: 0
+                      generate_failed_value: 2
 end

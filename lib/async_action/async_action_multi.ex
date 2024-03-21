@@ -29,16 +29,20 @@ defmodule Rephex.AsyncActionMulti do
     _progress_type = Keyword.get(opt, :progress_type, default_progress_type)
     key_type = Keyword.get(opt, :key_type, default_key_type)
 
+    progress_throttle = Keyword.get(opt, :progress_throttle, 0)
+
     quote do
       @behaviour Rephex.AsyncAction.Base
       @type result_path :: Backend.result_path()
 
+      @type option :: {:restart_if_running, boolean()}
       @spec start(Socket.t(), unquote(key_type), unquote(payload_type)) :: Socket.t()
-      def start(%Socket{} = socket, key, payload) do
+      @spec start(Socket.t(), unquote(key_type), unquote(payload_type), [option()]) :: Socket.t()
+      def start(%Socket{} = socket, key, payload, opts \\ []) do
         result_path = unquote(result_map_path) ++ [key]
 
         socket
-        |> Backend.start({__MODULE__, result_path}, payload)
+        |> Backend.start({__MODULE__, result_path}, payload, opts)
       end
 
       @spec cancel(Socket.t(), unquote(key_type)) :: Socket.t()
@@ -46,6 +50,11 @@ defmodule Rephex.AsyncActionMulti do
       def cancel(%Socket{} = socket, key, reason \\ {:shutdown, :cancel}) do
         result_path = unquote(result_map_path) ++ [key]
         Backend.cancel(socket, {__MODULE__, result_path}, reason)
+      end
+
+      @impl true
+      def options() do
+        %{throttle: unquote(progress_throttle)}
       end
     end
   end

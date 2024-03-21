@@ -23,19 +23,28 @@ defmodule Rephex.AsyncAction do
     cancel_reason_type = Keyword.get(opt, :cancel_reason_type, default_cancel_reason_type)
     _progress_type = Keyword.get(opt, :progress_type, default_progress_type)
 
+    progress_throttle = Keyword.get(opt, :progress_throttle, 0)
+
     quote do
       @behaviour Rephex.AsyncAction.Base
       @type result_path :: Backend.result_path()
 
+      @type option :: {:restart_if_running, boolean()}
       @spec start(Socket.t(), unquote(payload_type)) :: Socket.t()
-      def start(%Socket{} = socket, payload) do
-        Backend.start(socket, {__MODULE__, unquote(result_path)}, payload)
+      @spec start(Socket.t(), unquote(payload_type), [option()]) :: Socket.t()
+      def start(%Socket{} = socket, payload, opts \\ []) do
+        Backend.start(socket, {__MODULE__, unquote(result_path)}, payload, opts)
       end
 
       @spec cancel(Socket.t()) :: Socket.t()
       @spec cancel(Socket.t(), unquote(cancel_reason_type)) :: Socket.t()
       def cancel(%Socket{} = socket, reason \\ {:shutdown, :cancel}) do
         Backend.cancel(socket, {__MODULE__, unquote(result_path)}, reason)
+      end
+
+      @impl true
+      def options() do
+        %{throttle: unquote(progress_throttle)}
       end
     end
   end

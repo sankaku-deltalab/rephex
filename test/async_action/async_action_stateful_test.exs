@@ -50,13 +50,17 @@ defmodule RephexTest.AsyncActionStatefulTest do
       |> Enum.filter(fn {m, _} -> m in @action_multi end)
 
     common_choices = [
-      {12, {:call, ActionServer, :start_single, [gen_action(), gen_payload()]}},
+      {12,
+       {:call, ActionServer, :start_single, [gen_action(), gen_payload(), gen_start_options()]}},
       {12, {:call, ActionServer, :cancel_single, [gen_action(), gen_cancel_reason()]}},
-      {12, {:call, ActionServer, :start_multi, [gen_action_multi(), gen_payload()]}},
+      {12,
+       {:call, ActionServer, :start_multi,
+        [gen_action_multi(), gen_payload(), gen_start_options()]}},
       {6, {:call, ActionServer, :cancel_multi, [gen_action_multi(), gen_cancel_reason()]}},
       {12,
        {:call, ActionServer, :async_process_update_progress,
-        [gen_random_running_item(), gen_progress()]}}
+        [gen_random_running_item(), gen_progress()]}},
+      {12, {:call, ActionServer, :consume_time, [gen_time_delta()]}}
     ]
 
     cancel_multi_choices =
@@ -97,6 +101,14 @@ defmodule RephexTest.AsyncActionStatefulTest do
   def gen_payload(), do: map(term(), term())
   def gen_progress(), do: term()
 
+  def gen_start_options() do
+    frequency([
+      {12, []},
+      {12, [restart_if_running: true]},
+      {12, [restart_if_running: false]}
+    ])
+  end
+
   def gen_resolve_result() do
     frequency([
       {12, {:ok, term()}},
@@ -131,6 +143,10 @@ defmodule RephexTest.AsyncActionStatefulTest do
     end
   end
 
+  def gen_time_delta() do
+    oneof(Enum.to_list(1..50))
+  end
+
   @impl true
   def precondition(%Model{}, _) do
     true
@@ -139,10 +155,10 @@ defmodule RephexTest.AsyncActionStatefulTest do
   @impl true
   def postcondition(
         %Model{} = prev_model,
-        {:call, ActionServer, :start_single, [module, payload]},
+        {:call, ActionServer, :start_single, [module, payload, opts]},
         socket
       ) do
-    model = Model.start_single(prev_model, module, payload)
+    model = Model.start_single(prev_model, module, payload, opts)
 
     assert get_real_state(socket) == model.state
   end
@@ -150,10 +166,10 @@ defmodule RephexTest.AsyncActionStatefulTest do
   @impl true
   def postcondition(
         %Model{} = prev_model,
-        {:call, ActionServer, :start_multi, [{module, key}, payload]},
+        {:call, ActionServer, :start_multi, [{module, key}, payload, opts]},
         socket
       ) do
-    model = Model.start_multi(prev_model, {module, key}, payload)
+    model = Model.start_multi(prev_model, {module, key}, payload, opts)
 
     assert get_real_state(socket) == model.state
   end
@@ -202,6 +218,15 @@ defmodule RephexTest.AsyncActionStatefulTest do
     assert get_real_state(socket) == model.state
   end
 
+  @impl true
+  def postcondition(
+        %Model{},
+        {:call, ActionServer, :consume_time, [_t]},
+        _socket
+      ) do
+    true
+  end
+
   defp get_real_state(socket) do
     socket
     |> Assigns.get_state()
@@ -209,17 +234,21 @@ defmodule RephexTest.AsyncActionStatefulTest do
   end
 
   @impl true
-  def next_state(%Model{} = state, _res, {:call, ActionServer, :start_single, [module, payload]}) do
-    Model.start_single(state, module, payload)
+  def next_state(
+        %Model{} = state,
+        _res,
+        {:call, ActionServer, :start_single, [module, payload, opts]}
+      ) do
+    Model.start_single(state, module, payload, opts)
   end
 
   @impl true
   def next_state(
         %Model{} = state,
         _res,
-        {:call, ActionServer, :start_multi, [{module, key}, payload]}
+        {:call, ActionServer, :start_multi, [{module, key}, payload, opts]}
       ) do
-    Model.start_multi(state, {module, key}, payload)
+    Model.start_multi(state, {module, key}, payload, opts)
   end
 
   @impl true
@@ -256,5 +285,14 @@ defmodule RephexTest.AsyncActionStatefulTest do
         {:call, ActionServer, :cancel_multi, [{module, key}, cancel_reason]}
       ) do
     Model.cancel_multi(state, module, key, cancel_reason)
+  end
+
+  @impl true
+  def next_state(
+        %Model{} = state,
+        _res,
+        {:call, ActionServer, :consume_time, [t]}
+      ) do
+    Model.consume_time(state, t)
   end
 end
