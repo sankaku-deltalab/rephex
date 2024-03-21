@@ -32,6 +32,7 @@ defmodule Rephex.Api.LiveViewApi.Impl do
   The implementation of the LiveView sub-effect.
   """
   @behaviour Rephex.Api.LiveViewApi
+  require Phoenix.LiveView
   alias Phoenix.LiveView
 
   def start_async(socket, name, func) do
