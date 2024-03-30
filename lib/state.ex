@@ -44,16 +44,6 @@ defmodule Rephex.State.Assigns do
   end
 
   @doc """
-  Put value to Rephex state.
-  """
-  def put_state(%Socket{parent_pid: parent_pid}, _key, _value) when parent_pid != nil,
-    do: raise("Use this function only in LiveView (root).")
-
-  def put_state(%Socket{} = socket, key, value) do
-    Phoenix.Component.update(socket, @root, &Map.put(&1, key, value))
-  end
-
-  @doc """
   Update Rephex state by `put_in/3`.
 
   Example:
