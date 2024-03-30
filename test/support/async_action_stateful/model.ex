@@ -60,7 +60,6 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
     case get_in(model.state, result_path) do
       %AsyncResult{loading: nil} -> true
       %AsyncResult{loading: _} -> restart_if_running
-      _ -> false
     end
   end
 
@@ -69,15 +68,18 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
 
     model
     |> set_async_loading(action_module, result_path, initial_progress)
+    |> add_running_item({action_module, result_path})
     |> set_last_start_payload(payload)
   end
 
-  def async_process_update_progress(model, {action_module, result_path}, progress) do
+  def async_process_update_progress(model, {action_module, result_path}, progress, time_delta) do
     # Ignore update progress if not running
     # Ignore throttle is not overed
 
     throttle = action_module.options().throttle
-    now = model.monotonic_time_ms
+    now = model.monotonic_time_ms + time_delta
+
+    model = model |> consume_time(time_delta)
 
     with %AsyncResult{loading: {_old_progress, %{last_update_time: t}}} <-
            get_in(model.state, result_path),
@@ -122,13 +124,18 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
     model
   end
 
-  def consume_time(model, t) do
+  defp consume_time(model, t) do
     %__MODULE__{model | monotonic_time_ms: model.monotonic_time_ms + t}
   end
 
   defp set_last_start_payload(model, payload) do
     state = model.state |> Map.put(:last_start_payload, payload)
     %__MODULE__{model | state: state}
+  end
+
+  defp add_running_item(model, item) do
+    running_items = MapSet.put(model.running_items, item)
+    %__MODULE__{model | running_items: running_items}
   end
 
   defp set_async_loading(model, _action_module, result_path, progress) do

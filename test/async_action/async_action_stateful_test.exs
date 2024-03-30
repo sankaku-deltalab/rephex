@@ -12,13 +12,14 @@ defmodule RephexTest.AsyncActionStatefulTest do
   @action_single [Action]
   @action_multi [ActionMulti]
 
-  property "Rephex.AsyncAction stateful test", [:verbose] do
+  property "Rephex.AsyncAction stateful test" do
     forall cmds <- commands(__MODULE__) do
       {:ok, _pid} = ActionServer.start_link()
       {history, state, result} = run_commands(__MODULE__, cmds)
       ActionServer.stop()
 
       (result == :ok)
+      |> aggregate(command_names(cmds))
       |> when_fail(
         IO.puts("""
         ---
@@ -59,8 +60,7 @@ defmodule RephexTest.AsyncActionStatefulTest do
       {6, {:call, ActionServer, :cancel_multi, [gen_action_multi(), gen_cancel_reason()]}},
       {12,
        {:call, ActionServer, :async_process_update_progress,
-        [gen_random_running_item(), gen_progress()]}},
-      {12, {:call, ActionServer, :consume_time, [gen_time_delta()]}}
+        [gen_random_running_item(), gen_progress(), gen_time_delta()]}}
     ]
 
     cancel_multi_choices =
@@ -79,7 +79,7 @@ defmodule RephexTest.AsyncActionStatefulTest do
         [
           {12,
            {:call, ActionServer, :async_process_update_progress,
-            [gen_running_items, gen_progress()]}},
+            [gen_running_items, gen_progress(), gen_time_delta()]}},
           {12,
            {:call, ActionServer, :async_process_resolved,
             [gen_running_items, gen_resolve_result()]}}
@@ -177,10 +177,11 @@ defmodule RephexTest.AsyncActionStatefulTest do
   @impl true
   def postcondition(
         %Model{} = prev_model,
-        {:call, ActionServer, :async_process_update_progress, [result_path, progress]},
+        {:call, ActionServer, :async_process_update_progress,
+         [result_path, progress, time_delta]},
         socket
       ) do
-    model = Model.async_process_update_progress(prev_model, result_path, progress)
+    model = Model.async_process_update_progress(prev_model, result_path, progress, time_delta)
 
     assert get_real_state(socket) == model.state
   end
@@ -218,15 +219,6 @@ defmodule RephexTest.AsyncActionStatefulTest do
     assert get_real_state(socket) == model.state
   end
 
-  @impl true
-  def postcondition(
-        %Model{},
-        {:call, ActionServer, :consume_time, [_t]},
-        _socket
-      ) do
-    true
-  end
-
   defp get_real_state(socket) do
     socket
     |> Assigns.get_state()
@@ -255,9 +247,10 @@ defmodule RephexTest.AsyncActionStatefulTest do
   def next_state(
         %Model{} = state,
         _res,
-        {:call, ActionServer, :async_process_update_progress, [{action, result_path}, progress]}
+        {:call, ActionServer, :async_process_update_progress,
+         [{action, result_path}, progress, time_delta]}
       ) do
-    Model.async_process_update_progress(state, {action, result_path}, progress)
+    Model.async_process_update_progress(state, {action, result_path}, progress, time_delta)
   end
 
   @impl true
@@ -285,14 +278,5 @@ defmodule RephexTest.AsyncActionStatefulTest do
         {:call, ActionServer, :cancel_multi, [{module, key}, cancel_reason]}
       ) do
     Model.cancel_multi(state, module, key, cancel_reason)
-  end
-
-  @impl true
-  def next_state(
-        %Model{} = state,
-        _res,
-        {:call, ActionServer, :consume_time, [t]}
-      ) do
-    Model.consume_time(state, t)
   end
 end

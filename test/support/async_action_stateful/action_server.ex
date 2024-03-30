@@ -58,13 +58,19 @@ defmodule RephexTest.Fixture.AsyncActionStateful.ActionServer do
     )
   end
 
-  def async_process_update_progress({action_module, result_path}, progress) do
+  def async_process_update_progress({action_module, result_path}, progress, time_delta) do
     fn state ->
+      new_time = state.time_ms + time_delta
+
+      # override time
+      Rephex.Api.MockSystemApi
+      |> stub(:monotonic_time, fn :millisecond -> new_time end)
+
       {:noreply, socket} =
         gen_update_progress_message({action_module, result_path}, progress)
         |> LiveView.handle_info(state.socket)
 
-      {:reply, socket, %{state | socket: socket}}
+      {:reply, socket, %{state | socket: socket, time_ms: new_time}}
     end
     |> call_fun()
   end
@@ -98,13 +104,6 @@ defmodule RephexTest.Fixture.AsyncActionStateful.ActionServer do
       cancel_expect({action_module, result_path}, reason)
       socket = action_module.cancel(state.socket, key, reason)
       {:reply, socket, %{state | socket: socket}}
-    end
-    |> call_fun()
-  end
-
-  def consume_time(time_ms) do
-    fn state ->
-      {:reply, state.time_ms, %{state | time_ms: state.time_ms + time_ms}}
     end
     |> call_fun()
   end
