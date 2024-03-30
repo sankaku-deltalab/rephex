@@ -12,13 +12,14 @@ defmodule RephexTest.AsyncActionStatefulTest do
   @action_single [Action]
   @action_multi [ActionMulti]
 
-  property "Rephex.AsyncAction stateful test", [:verbose] do
+  property "Rephex.AsyncAction stateful test" do
     forall cmds <- commands(__MODULE__) do
       {:ok, _pid} = ActionServer.start_link()
       {history, state, result} = run_commands(__MODULE__, cmds)
       ActionServer.stop()
 
       (result == :ok)
+      |> aggregate(command_names(cmds))
       |> when_fail(
         IO.puts("""
         ---
