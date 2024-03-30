@@ -60,7 +60,6 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
     case get_in(model.state, result_path) do
       %AsyncResult{loading: nil} -> true
       %AsyncResult{loading: _} -> restart_if_running
-      _ -> false
     end
   end
 
@@ -69,6 +68,7 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
 
     model
     |> set_async_loading(action_module, result_path, initial_progress)
+    |> add_running_item({action_module, result_path})
     |> set_last_start_payload(payload)
   end
 
@@ -129,6 +129,11 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
   defp set_last_start_payload(model, payload) do
     state = model.state |> Map.put(:last_start_payload, payload)
     %__MODULE__{model | state: state}
+  end
+
+  defp add_running_item(model, item) do
+    running_items = MapSet.put(model.running_items, item)
+    %__MODULE__{model | running_items: running_items}
   end
 
   defp set_async_loading(model, _action_module, result_path, progress) do
