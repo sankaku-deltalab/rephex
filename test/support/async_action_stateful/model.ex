@@ -72,12 +72,14 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
     |> set_last_start_payload(payload)
   end
 
-  def async_process_update_progress(model, {action_module, result_path}, progress) do
+  def async_process_update_progress(model, {action_module, result_path}, progress, time_delta) do
     # Ignore update progress if not running
     # Ignore throttle is not overed
 
     throttle = action_module.options().throttle
-    now = model.monotonic_time_ms
+    now = model.monotonic_time_ms + time_delta
+
+    model = model |> consume_time(time_delta)
 
     with %AsyncResult{loading: {_old_progress, %{last_update_time: t}}} <-
            get_in(model.state, result_path),
@@ -122,7 +124,7 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
     model
   end
 
-  def consume_time(model, t) do
+  defp consume_time(model, t) do
     %__MODULE__{model | monotonic_time_ms: model.monotonic_time_ms + t}
   end
 
