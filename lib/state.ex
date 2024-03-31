@@ -12,6 +12,8 @@ defmodule Rephex.State do
     initial_state = Keyword.fetch!(opt, :initial_state)
 
     quote do
+      import Rephex.State.Assigns
+
       def init(%Socket{} = socket) do
         socket |> Rephex.State.init(unquote(initial_state))
       end
