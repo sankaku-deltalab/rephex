@@ -1,141 +1,159 @@
 # Rephex
 
-Rephex is Redux-toolkit in Phenix LiveView.
+Rephex is [Redux-toolkit](https://redux-toolkit.js.org) in Phenix LiveView.
 
-## Example:
+Rephex を使うことで、
+
+- 状態とその変更を View から分けることができる。
+- 小コンポネントが必要とする assigns を親ではなく子が決めることができる。
+- コンポネントにおいて、グローバルな状態とコンポネントが持つ些細なローカル状態（フォームなど）を明確に分けることができる。
+- async をより簡単に扱うことができる。
+
+## Example
+
+<!-- MODULEDOC -->
 
 ```elixir
-defmodule RephexUser.State do
-  alias RephexUser.Slice
-  use Rephex.State, slices: [Slice.CounterSlice]
-end
-```
+defmodule ExampleWeb.State do
+  alias Phoenix.LiveView.{AsyncResult, Socket}
 
-```elixir
-defmodule RephexUser.Slice.CounterSlice do
-  @behaviour Rephex.Slice
-  alias Phoenix.LiveView.Socket
-  alias RephexUser.Slice.CounterSlice.AsyncAddCount
+  @type t :: %{
+          count: integer(),
+          add_twice_async: %AsyncResult{}
+        }
 
-  defmodule State do
-    defstruct count: 0
-    @type t :: %State{count: integer()}
+  @initial_state %{
+    count: 0,
+    # AsyncAction requires AsyncResult.
+    add_twice_async: AsyncResult.ok(0),
+    # AsyncActionMulti requires map will contain AsyncResult.
+    delayed_add_multi: %{}
+  }
 
-    @spec add_count(t(), integer()) :: t()
-    def add_count(%__MODULE__{} = state, amount) when is_integer(amount) do
-      %{state | count: state.count + amount}
-    end
-  end
-
-  defmodule Support do
-    use Rephex.Slice.Support, struct: State, name: :counter3
-  end
-
-  @impl true
-  @spec init(Socket.t()) :: Socket.t()
-  def init(%Socket{} = socket) do
-    Support.init_slice(socket, %State{})
-  end
-
-  @impl true
-  @spec async_modules() :: [atom()]
-  def async_modules(), do: [AsyncAddCount]
-
-  # Action
-
-  @spec count_up(Socket.t(), %{}) :: Socket.t()
-  def count_up(%Socket{} = socket, _payload) do
-    Support.update_slice(socket, &State.add_count(&1, 1))
-  end
+  use Rephex.State, initial_state: @initial_state
 
   @spec add_count(Socket.t(), %{amount: integer()}) :: Socket.t()
-  def add_count(%Socket{} = socket, %{amount: am}) when is_integer(am) do
-    Support.update_slice(socket, &State.add_count(&1, am))
-  end
-
-  # Async action
-
-  @spec add_count_async(Socket.t(), %{amount: integer()}) :: Socket.t()
-  def add_count_async(%Socket{} = socket, %{amount: _am} = payload) do
-    AsyncAddCount.start(socket, payload)
-  end
-
-  # Selector
-
-  @spec count(%{counter3: map()}) :: integer()
-  def count(root) do
-    root
-    |> Support.slice_in_root()
-    |> then(fn %State{count: c} -> c end)
+  def add_count(%Socket{} = socket, %{amount: amount} = _payload) when is_integer(amount) do
+    # You can use `update_state`, `update_state_in` and `put_state_in` to update state
+    update_state_in(socket, [:count], &(&1 + amount))
   end
 end
+```
 
-defmodule RephexUser.Slice.CounterSlice.AsyncAddCount do
-  @behaviour Rephex.AsyncAction
+```elixir
+defmodule ExampleWeb.State.AddCountTwiceAsync do
+  alias Phoenix.LiveView
+  alias ExampleWeb.State
 
-  alias RephexUser.Slice.CounterSlice
-  alias RephexUser.Slice.CounterSlice.Support
-  import Phoenix.LiveComponent
-  alias Phoenix.LiveView.Socket
-  # alias Phoenix.LiveView.AsyncResult
+  @type payload :: %{amount: integer()}
+  @type progress :: {current :: non_neg_integer(), total :: non_neg_integer()}
+  @type cancel_reason :: any()
+
+  use Rephex.AsyncAction,
+    result_path: [:add_twice_async],
+    # You can pass types for functions implemented in macro.
+    payload_type: payload,
+    cancel_reason_type: cancel_reason,
+    progress_type: progress,
+    # You can suppress hyper frequent progress updates by setting throttle.
+    progress_throttle: 100
 
   @impl true
-  @spec start(Socket.t(), %{amount: integer()}) :: Socket.t()
-  def start(%Socket{} = socket, %{amount: am}) do
-    Support.start_async(socket, __MODULE__, fn _state ->
-      :timer.sleep(1000)
-      am
-    end)
+  def before_start(socket, _result_path, %{amount: _amount} = _payload) do
+    # optional
+    # This function will be called before `start_async`.
+    socket |> LiveView.put_flash(:info, "Add twice start")
   end
 
   @impl true
-  def resolve(%Socket{} = socket, result) do
+  def initial_progress(_path, _payload) do
+    # optional
+    # This function will be called before `start_async` and determine the initial progress.
+    # AsyncResult.loading will be `{progress, _meta_values}` before start_async.
+    {0, 1}
+  end
+
+  @impl true
+  def start_async(_state, _path, %{amount: amount} = _payload, progress) do
+    # required
+    # This function will be passed to Phoenix's `start_async`.
+    max = 500
+    progress.({0, max})
+
+    1..max
+    |> Enum.each(fn i ->
+      :timer.sleep(2)
+      progress.({i, max})
+    end)
+
+    amount
+  end
+
+  @impl true
+  def after_resolve(socket, _result_path, result) do
+    # optional
+    # This function will be called after `start_async` is finished.
     case result do
-      {:ok, amount} when is_integer(amount) -> CounterSlice.add_count(socket, %{amount: amount})
-      {:exit, _reason} -> socket
+      {:ok, amount} ->
+        socket
+        |> State.add_count(%{amount: amount})
+        |> LiveView.put_flash(:info, "Add twice done: #{amount}")
+
+      {:exit, _reason} ->
+        socket
+        |> LiveView.put_flash(:error, "Add twice failed")
+    end
+  end
+
+  @impl true
+  def generate_failed_value(_result_path, exit_reason) do
+    # optional
+    # You can customize the failed value.
+    case exit_reason do
+      {:shutdown, :cancel} -> "canceled by no-reason"
+      {:shutdown, {:cancel, text}} when is_bitstring(text) -> "canceled by #{text}"
+      _ -> "unknown reason"
     end
   end
 end
 ```
 
 ```elixir
-defmodule RephexUserWeb.UserLive.Index do
-  use RephexUserWeb, :live_view
-  alias Phoenix.LiveView.Socket
-  alias RephexUser.State
-  alias RephexUser.Slice.CounterSlice
+defmodule ExampleWeb.State.DelayedAddAsync do
+  alias ExampleWeb.State
 
-  # Init at root component
-  def mount(_params, _session, %Socket{} = socket) do
-    {:ok, State.init(socket)}
+  @type payload :: %{amount: integer()}
+  @type progress :: {current :: non_neg_integer(), total :: non_neg_integer()}
+  @type cancel_reason :: any()
+
+  use Rephex.AsyncActionMulti,
+    result_map_path: [:delayed_add_multi],
+    # You can pass types for functions implemented in macro.
+    payload_type: payload,
+    cancel_reason_type: cancel_reason,
+    progress_type: progress
+
+  @impl true
+  def start_async(_state, _path, %{amount: amount} = _payload, _progress) do
+    :timer.sleep(1000)
+    amount
   end
 
-  # Update Rephex state by event
-  def handle_event("add_count", %{"amount" => am}, socket) when is_bitstring(am) do
-    am = am |> String.to_integer()
-    socket = socket |> CounterSlice.add_count(%{amount: am})
-    {:noreply, socket}
-  end
+  @impl true
+  def after_resolve(socket, _result_path, result) do
+    case result do
+      {:ok, amount} ->
+        socket
+        |> State.add_count(%{amount: amount})
 
-  def handle_event("add_2_async", _params, socket) do
-    socket = socket |> CounterSlice.add_count_async(%{amount: 2})
-    {:noreply, socket}
-  end
-
-  def handle_async(name, result, socket) do
-    {:noreply, State.resolve_async(socket, name, result)}
+      {:exit, _reason} ->
+        socket
+    end
   end
 end
 ```
 
-```heex
-<div>
-  <p>Count: <%= RephexUser.Slice.CounterSlice.count(@__rephex__) %></p>
-  <button phx-click="add_count" phx-value-amount="10">[Add 10]</button>
-  <button phx-click="add_2_async">[Add 2 async]</button>
-  <.live_component id="child_1" module={ChildComponent} __rephex__={Rephex.State.propagate(@__rephex__)}/>
-</div>
-```
+<!-- MODULEDOC -->
 
 ## Installation
 

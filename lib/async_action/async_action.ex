@@ -1,4 +1,7 @@
 defmodule Rephex.AsyncAction do
+  @moduledoc """
+  TODO: write module documentation
+  """
   alias Phoenix.LiveView.Socket
   alias Rephex.AsyncAction.Backend
 
