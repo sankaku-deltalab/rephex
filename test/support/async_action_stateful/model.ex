@@ -27,7 +27,7 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
 
   def start_single(model, action_module, payload, opts) do
     result_path = [:result_single]
-    maybe_start(model, action_module, result_path, payload, opts)
+    maybe_start(model, {action_module, result_path}, payload, opts)
   end
 
   def start_multi(model, {action_module, key}, payload, opts) do
@@ -43,18 +43,18 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
 
     model = %__MODULE__{model | state: state}
 
-    maybe_start(model, action_module, result_path, payload, opts)
+    maybe_start(model, {action_module, result_path}, payload, opts)
   end
 
-  defp maybe_start(model, action_module, result_path, payload, opts) do
-    if should_start(model, action_module, result_path, payload, opts) do
-      start_internal(model, action_module, result_path, payload, opts)
+  defp maybe_start(model, async_key, payload, opts) do
+    if should_start(model, async_key, payload, opts) do
+      start_internal(model, async_key, payload, opts)
     else
       model
     end
   end
 
-  defp should_start(model, _action_module, result_path, _payload, opts) do
+  defp should_start(model, {_action_module, result_path}, _payload, opts) do
     restart_if_running = Keyword.get(opts, :restart_if_running, false)
 
     case get_in(model.state, result_path) do
@@ -63,16 +63,21 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
     end
   end
 
-  defp start_internal(model, action_module, result_path, payload, _opts) do
+  defp start_internal(model, {action_module, result_path} = async_key, payload, _opts) do
     initial_progress = action_module.initial_progress(result_path, payload)
 
     model
-    |> set_async_loading(action_module, result_path, initial_progress)
-    |> add_running_item({action_module, result_path})
+    |> set_async_loading(async_key, initial_progress)
+    |> add_running_item(async_key)
     |> set_last_start_payload(payload)
   end
 
-  def async_process_update_progress(model, {action_module, result_path}, progress, time_delta) do
+  def async_process_update_progress(
+        model,
+        {action_module, result_path} = async_key,
+        progress,
+        time_delta
+      ) do
     # Ignore update progress if not running
     # Ignore throttle is not overed
 
@@ -84,7 +89,7 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
     with %AsyncResult{loading: {_old_progress, %{last_update_time: t}}} <-
            get_in(model.state, result_path),
          true <- now - t >= throttle do
-      model |> set_async_loading(action_module, result_path, progress)
+      model |> set_async_loading(async_key, progress)
     else
       _ ->
         model
@@ -138,7 +143,7 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
     %__MODULE__{model | running_items: running_items}
   end
 
-  defp set_async_loading(model, _action_module, result_path, progress) do
+  defp set_async_loading(model, {_action_module, result_path}, progress) do
     meta = %{last_update_time: model.monotonic_time_ms}
 
     state =
