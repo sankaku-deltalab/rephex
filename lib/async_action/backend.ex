@@ -4,6 +4,8 @@ defmodule Rephex.AsyncAction.Backend do
   import Rephex.State.Assigns
   alias Rephex.Api.{LiveViewApi, KernelApi, SystemApi}
 
+  @type loading :: {any(), %{last_update_time: integer() | nil}}
+
   @doc """
   `YourAction.start(socket, ...)` call this.
   """
@@ -30,11 +32,11 @@ defmodule Rephex.AsyncAction.Backend do
     initial_progress = call_initial_progress(result_path, payload, action_module)
     async_fun = generate_start_async_fun(socket, async_key, payload)
     async_name = gen_start_async_name(async_key)
-    now = SystemApi.monotonic_time(:millisecond)
+    meta = %{last_update_time: nil}
 
     socket
     |> call_before_start(result_path, payload, action_module)
-    |> update_loading_status!(async_key, progress: initial_progress, now: now)
+    |> update_loading_status!(async_key, progress: initial_progress, meta: meta)
     |> LiveViewApi.start_async(async_name, async_fun)
   end
 
@@ -73,9 +75,10 @@ defmodule Rephex.AsyncAction.Backend do
     now = SystemApi.monotonic_time(:millisecond)
     option = call_options(action_module)
     throttle = Map.get(option, :throttle, 0)
+    meta = %{last_update_time: now}
 
     if can_update_progress?(socket, async_key, now, throttle) do
-      update_loading_status!(socket, async_key, progress: progress, now: now)
+      update_loading_status!(socket, async_key, progress: progress, meta: meta)
     else
       socket
     end
@@ -84,10 +87,10 @@ defmodule Rephex.AsyncAction.Backend do
   defp can_update_progress?(socket, {_m, result_path}, now, throttle) do
     # Ignore update progress if not running
     # Ignore update if throttle is not overed
-    with %AsyncResult{loading: {_, %{last_update_time: t}}} <- get_state_in(socket, result_path),
-         true <- now - t >= throttle do
-      true
-    else
+    case get_state_in(socket, result_path) do
+      %AsyncResult{loading: nil} -> false
+      %AsyncResult{loading: {_, %{last_update_time: nil}}} -> true
+      %AsyncResult{loading: {_, %{last_update_time: t}}} when now - t >= throttle -> true
       _ -> false
     end
   end
@@ -171,10 +174,8 @@ defmodule Rephex.AsyncAction.Backend do
          %Socket{} = socket,
          {_action_module, result_path},
          progress: progress,
-         now: now
+         meta: meta
        ) do
-    meta = %{last_update_time: now}
-
     socket
     |> update_state_in(result_path, &AsyncResult.loading(&1, {progress, meta}))
   end

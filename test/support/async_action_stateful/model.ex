@@ -8,7 +8,7 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
 
   @type start_option :: {:restart_if_running, boolean()}
   @type module_option :: {:progress_throttle, non_neg_integer()}
-  @type loading_meta :: %{last_update_time: integer()}
+  @type loading_meta :: %{last_update_time: integer() | nil}
 
   @type t :: %__MODULE__{
           running_items: MapSet.t(async_key()),
@@ -65,34 +65,43 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
 
   defp start_internal(model, {action_module, result_path} = async_key, payload, _opts) do
     initial_progress = action_module.initial_progress(result_path, payload)
+    meta = %{last_update_time: nil}
 
     model
-    |> set_async_loading(async_key, initial_progress)
+    |> set_async_loading(async_key, {initial_progress, meta})
     |> add_running_item(async_key)
     |> set_last_start_payload(payload)
   end
 
   def async_process_update_progress(
         model,
-        {action_module, result_path} = async_key,
+        {action_module, _result_path} = async_key,
         progress,
         time_delta
       ) do
     # Ignore update progress if not running
     # Ignore throttle is not overed
 
-    throttle = action_module.options().throttle
-    now = model.monotonic_time_ms + time_delta
-
     model = model |> consume_time(time_delta)
+    throttle = action_module.options().throttle
+    now = model.monotonic_time_ms
+    meta = %{last_update_time: now}
 
-    with %AsyncResult{loading: {_old_progress, %{last_update_time: t}}} <-
-           get_in(model.state, result_path),
-         true <- now - t >= throttle do
-      model |> set_async_loading(async_key, progress)
+    if can_update_progress?(model, async_key, now, throttle) do
+      model |> set_async_loading(async_key, {progress, meta})
     else
-      _ ->
-        model
+      model
+    end
+  end
+
+  defp can_update_progress?(model, {_m, result_path}, now, throttle) do
+    # Ignore update progress if not running
+    # Ignore update if throttle is not overed
+    case get_in(model.state, result_path) do
+      %AsyncResult{loading: nil} -> false
+      %AsyncResult{loading: {_, %{last_update_time: nil}}} -> true
+      %AsyncResult{loading: {_, %{last_update_time: t}}} when now - t >= throttle -> true
+      _ -> false
     end
   end
 
@@ -143,15 +152,10 @@ defmodule RephexTest.Fixture.AsyncActionStateful.Model do
     %__MODULE__{model | running_items: running_items}
   end
 
-  defp set_async_loading(model, {_action_module, result_path}, progress) do
-    meta = %{last_update_time: model.monotonic_time_ms}
-
+  defp set_async_loading(model, {_action_module, result_path}, loading) do
     state =
       model.state
-      |> update_in(
-        result_path,
-        &AsyncResult.loading(&1, {progress, meta})
-      )
+      |> update_in(result_path, &AsyncResult.loading(&1, loading))
 
     %__MODULE__{model | state: state}
   end
