@@ -7,114 +7,110 @@ defmodule Rephex.AsyncAction.Backend do
   @doc """
   `YourAction.start(socket, ...)` call this.
   """
-  def start(%Socket{} = socket, {action_module, result_path}, payload, opts) do
-    restart_if_running = Keyword.get(opts, :restart_if_running, false)
-
+  def start(%Socket{} = socket, {_action_module, result_path} = async_key, payload, opts) do
     socket = socket |> put_async_result_if_not_exist(result_path)
 
-    loading = get_state_in(socket, result_path).loading
-
-    can_start =
-      cond do
-        loading == nil -> true
-        loading != nil and restart_if_running -> true
-        true -> false
-      end
-
-    if can_start do
-      start_internal(socket, {action_module, result_path}, payload)
+    if should_start?(socket, async_key, opts) do
+      start_internal(socket, async_key, payload)
     else
       socket
     end
   end
 
-  defp start_internal(%Socket{} = socket, {action_module, result_path}, payload) do
-    state = Rephex.State.Assigns.get_state(socket)
-    initial_progress = call_initial_progress(result_path, payload, action_module)
+  defp should_start?(socket, {_action_module, result_path} = _async_key, opts) do
+    restart_if_running = Keyword.get(opts, :restart_if_running, false)
 
+    case get_state_in(socket, result_path) do
+      %AsyncResult{loading: nil} -> true
+      %AsyncResult{loading: _} -> restart_if_running
+    end
+  end
+
+  defp start_internal(%Socket{} = socket, {action_module, result_path} = async_key, payload) do
+    initial_progress = call_initial_progress(result_path, payload, action_module)
+    async_fun = generate_start_async_fun(socket, async_key, payload)
+    async_name = gen_start_async_name(async_key)
+    now = SystemApi.monotonic_time(:millisecond)
+
+    socket
+    |> call_before_start(result_path, payload, action_module)
+    |> update_loading_status!(async_key, progress: initial_progress, now: now)
+    |> LiveViewApi.start_async(async_name, async_fun)
+  end
+
+  defp generate_start_async_fun(
+         %Socket{} = socket,
+         {action_module, result_path} = async_key,
+         payload
+       ) do
+    state = Rephex.State.Assigns.get_state(socket)
     lv_pid = self()
 
     update_progress =
       &KernelApi.send(
         lv_pid,
-        gen_update_progress_message({action_module, result_path}, &1)
+        gen_update_progress_message(async_key, &1)
       )
 
     async_fun_raw = &action_module.start_async/4
-    async_fun = fn -> async_fun_raw.(state, result_path, payload, update_progress) end
-
-    now = SystemApi.monotonic_time(:millisecond)
-
-    socket
-    |> call_before_start(result_path, payload, action_module)
-    |> update_loading_status!({action_module, result_path},
-      progress: initial_progress,
-      now: now
-    )
-    |> LiveViewApi.start_async(
-      gen_start_async_name({action_module, result_path}),
-      async_fun
-    )
+    fn -> async_fun_raw.(state, result_path, payload, update_progress) end
   end
 
   @doc """
   `YourAction.cancel(socket, ...)` call this.
   """
-  def cancel(%Socket{} = socket, {action_module, result_path}, reason) do
+  def cancel(%Socket{} = socket, async_key, reason) do
+    async_name = gen_start_async_name(async_key)
+
     socket
-    |> LiveViewApi.cancel_async(
-      gen_start_async_name({action_module, result_path}),
-      reason
-    )
+    |> LiveViewApi.cancel_async(async_name, reason)
   end
 
   @doc """
   `LiveView.handle_info(..., socket)` call this.
   """
-  def update_progress(%Socket{} = socket, {action_module, result_path} = meta_key, progress) do
+  def update_progress(%Socket{} = socket, {action_module, _result_path} = async_key, progress) do
     now = SystemApi.monotonic_time(:millisecond)
     option = call_options(action_module)
     throttle = Map.get(option, :throttle, 0)
 
-    with %AsyncResult{loading: {_, %{last_update_time: t}}} <- get_state_in(socket, result_path),
-         true <- now - t >= throttle do
-      update_loading_status!(socket, meta_key, progress: progress, now: now)
+    if can_update_progress?(socket, async_key, now, throttle) do
+      update_loading_status!(socket, async_key, progress: progress, now: now)
     else
-      _ ->
-        socket
+      socket
     end
   end
 
-  defp update_loading_status!(
-         %Socket{} = socket,
-         {_action_module, result_path},
-         progress: progress,
-         now: now
-       ) do
-    meta = %{last_update_time: now}
-
-    socket
-    |> update_state_in(result_path, &AsyncResult.loading(&1, {progress, meta}))
+  defp can_update_progress?(socket, {_m, result_path}, now, throttle) do
+    # Ignore update progress if not running
+    # Ignore update if throttle is not overed
+    with %AsyncResult{loading: {_, %{last_update_time: t}}} <- get_state_in(socket, result_path),
+         true <- now - t >= throttle do
+      true
+    else
+      _ -> false
+    end
   end
 
   @doc """
   `LiveView.handle_async(..., result, socket)` call this.
   """
-  def resolve(%Socket{} = socket, {action_module, result_path}, result) do
+  def resolve(%Socket{} = socket, {action_module, result_path} = async_key, result) do
     case result do
       {:ok, success_result} ->
         socket
-        |> update_state_in(result_path, &AsyncResult.ok(&1, success_result))
-        |> call_after_resolve(result_path, result, action_module)
+        |> set_async_as_ok!(async_key, success_result)
 
       {:exit, reason} ->
         failed_value = call_generate_failed_value(result_path, reason, action_module)
 
         socket
-        |> update_state_in(result_path, &AsyncResult.failed(&1, failed_value))
-        |> call_after_resolve(result_path, result, action_module)
+        |> set_async_as_failed!(async_key, failed_value)
     end
+    |> call_after_resolve(result_path, result, action_module)
   end
+
+  # Optional callbacks
 
   defp call_initial_progress(result_path, payload, action_module) do
     mfa = {action_module, :initial_progress, 2}
@@ -141,12 +137,46 @@ defmodule Rephex.AsyncAction.Backend do
     Rephex.Util.call_optional(mfa, [], %{})
   end
 
+  # Generate process message
+
   defp gen_update_progress_message({action_module, result_path}, progress) do
     {Rephex.AsyncAction.Backend, :update_progress, {action_module, result_path}, progress}
   end
 
   defp gen_start_async_name({action_module, result_path}) do
     {Rephex.AsyncAction.Backend, :start_async, {action_module, result_path}}
+  end
+
+  # Update result
+
+  defp set_async_as_ok!(
+         %Socket{} = socket,
+         {_action_module, result_path},
+         result
+       ) do
+    socket
+    |> update_state_in(result_path, &AsyncResult.ok(&1, result))
+  end
+
+  defp set_async_as_failed!(
+         %Socket{} = socket,
+         {_action_module, result_path},
+         result
+       ) do
+    socket
+    |> update_state_in(result_path, &AsyncResult.failed(&1, result))
+  end
+
+  defp update_loading_status!(
+         %Socket{} = socket,
+         {_action_module, result_path},
+         progress: progress,
+         now: now
+       ) do
+    meta = %{last_update_time: now}
+
+    socket
+    |> update_state_in(result_path, &AsyncResult.loading(&1, {progress, meta}))
   end
 
   defp put_async_result_if_not_exist(socket, result_path) do
