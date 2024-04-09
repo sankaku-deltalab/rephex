@@ -1,4 +1,4 @@
-# Rephex
+# <img src="images/rephex_logo.svg" height="120" alt="Rephex Logo"> Rephex
 
 **Rephex**: Target to include the Power of [Redux-toolkit](https://redux-toolkit.js.org) to Phoenix LiveView.
 
