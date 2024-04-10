@@ -53,6 +53,7 @@ defmodule Rephex.MixProject do
   defp docs do
     [
       main: "readme",
+      logo: "assets/logo.svg",
       extras: [
         "README.md",
         "CHANGELOG.md"

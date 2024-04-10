@@ -1,6 +1,8 @@
-# <img src="images/rephex_logo.svg" height="120" alt="Rephex Logo"> Rephex
+# Rephex
 
-**Rephex**: Target to include the Power of [Redux-toolkit](https://redux-toolkit.js.org) to Phoenix LiveView.
+<img src="assets/logo.svg" height="120" alt="Rephex Logo">
+
+**Rephex**: Target to introduce the Power of [Redux-toolkit](https://redux-toolkit.js.org) to Phoenix LiveView.
 
 By integrating Rephex into your Phoenix LiveView projects, you unlock a suite of capabilities designed to enhance the structure, readability, and maintainability of your code:
 
@@ -52,6 +54,8 @@ defmodule RephexPgWeb.AccountLive.Index do
 
   @impl true
   def render(assigns) do
+    # At default, Rephex state is assigned at `:rpx`.
+    # You can change root key by config.
     ~H"""
     <div>Count: <%= @rpx.count %></div>
     <button class="border-2" phx-click="add_count" phx-value-amount={1}>
@@ -117,10 +121,11 @@ defmodule RephexPgWeb.State do
   @initial_state %{
     count: 0,
     # AsyncAction requires AsyncResult.
-    double_value: AsyncResult.ok(0),
-    add_twice_async: AsyncResult.ok(0),
-    # AsyncActionMulti requires map will contain AsyncResult.
-    delayed_add_multi: %{}
+    # rpx.double_value.result: Result of AsyncAction.start_async
+    # rpx.double_value.loading: `{progress, _meta}` while AsyncAction is running. `progress/1` in `start_async/4` will update progress.
+    #   In this case, rpx.double_value.loading will be `{{current, max}, _meta}`
+    # rpx.double_value.failed: Result of AsyncAction.start_async (if canceled or exception raised)
+    double_value: AsyncResult.ok(0)
   }
 
   use Rephex.State, initial_state: @initial_state
@@ -154,6 +159,7 @@ defmodule RephexPgWeb.State.HeavyDoubleAsync do
     1..max
     |> Enum.each(fn i ->
       :timer.sleep(2)
+      # Update `rpx.double_value.loading` by AsyncResult.loading/2
       progress.({i, max})
     end)
 
