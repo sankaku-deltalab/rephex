@@ -4,8 +4,8 @@ defmodule Rephex.MixProject do
   def project do
     [
       app: :rephex,
-      version: "0.1.0",
-      elixir: "~> 1.15",
+      version: "0.1.1",
+      elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       description: description(),
