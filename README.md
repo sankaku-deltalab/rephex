@@ -2,6 +2,8 @@
 
 **Rephex**: Target to introduce the Power of [Redux-toolkit](https://redux-toolkit.js.org) to Phoenix LiveView.
 
+*Experimental: [README.md via ChatGPT is available](https://chat.openai.com/g/g-btova0uNt-rephex-readme-md)*
+
 By integrating Rephex into your Phoenix LiveView projects, you unlock a suite of capabilities designed to enhance the structure, readability, and maintainability of your code:
 
 - **Decouple State Management from Views**: Achieve a clean separation between your application's state and its presentation layer, allowing for more manageable codebases and clearer state transitions.
