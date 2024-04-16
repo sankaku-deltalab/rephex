@@ -32,6 +32,8 @@ defmodule Rephex.MixProject do
     [
       {:phoenix, "~> 1.5"},
       {:phoenix_live_view, "~> 0.20.2"},
+      {:mox, "~> 1.1", only: [:dev, :test]},
+      {:propcheck, "~> 1.4", only: [:dev, :test]},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
@@ -51,6 +53,8 @@ defmodule Rephex.MixProject do
   defp docs do
     [
       main: "readme",
+      logo: "assets/logo.svg",
+      assets: "assets",
       extras: [
         "README.md",
         "CHANGELOG.md"

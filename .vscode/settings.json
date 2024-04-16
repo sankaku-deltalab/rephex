@@ -1,5 +1,8 @@
 {
   "cSpell.words": [
     "Rephex"
-  ]
+  ],
+  "elixirLS.envVariables": {
+    "RUNNING_IN_ELIXIR_LS": "1",
+  }
 }
